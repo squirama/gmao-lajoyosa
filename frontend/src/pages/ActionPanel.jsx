@@ -239,7 +239,7 @@ export default function ActionPanel({ context }) {
     };
 
     return (
-        <div className="page-container">
+        <div className="page-container action-panel-page">
             {/* Header */}
             <div className="hmi-header">
                 <div className="machine-name">{context.asset?.name || "MÁQUINA NO SELECCIONADA"}</div>
@@ -260,18 +260,18 @@ export default function ActionPanel({ context }) {
             {/* Modal for Alerts */}
             {showAlertsModal && (
                 <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <div className="card" style={{ width: '80%', maxWidth: '800px', border: '2px solid var(--neon-orange)' }}>
+                    <div className="card action-panel-alert-modal" style={{ width: '80%', maxWidth: '800px', border: '2px solid var(--neon-orange)' }}>
                         <h2 style={{ color: 'var(--neon-orange)', marginTop: 0 }}>⚠️ TAREAS PENDIENTES (DEPARTAMENTO)</h2>
 
                         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                             {alerts.map(a => (
-                                <div key={a.id} style={{ background: '#220', padding: '10px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div key={a.id} className="action-panel-alert-item" style={{ background: '#220', padding: '10px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <div style={{ color: 'yellow', fontWeight: 'bold' }}>{a.asset_name} - {a.task_description}</div>
                                         <div style={{ color: '#aaa' }}>Fecha Programada: {new Date(a.scheduled_date).toLocaleDateString()}</div>
                                         {a.postpone_count > 0 && <div style={{ color: 'red' }}>Pospuesto {a.postpone_count} veces</div>}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                         <button className="btn-manual" onClick={() => handleDoAlert(a)}>✅ HACER</button>
                                         <button className="btn-danger" onClick={() => setPostponeData({ ...postponeData, alert_id: a.id })}>⏳ POSPONER</button>
                                     </div>
@@ -280,7 +280,7 @@ export default function ActionPanel({ context }) {
                         </div>
 
                         {postponeData.alert_id && (
-                            <div style={{ marginTop: '20px', padding: '10px', background: '#333' }}>
+                            <div className="action-panel-postpone-box" style={{ marginTop: '20px', padding: '10px', background: '#333' }}>
                                 <h3 style={{ marginTop: 0 }}>Posponer Tarea</h3>
                                 <input
                                     type="date"
@@ -305,7 +305,7 @@ export default function ActionPanel({ context }) {
                 </div>
             )}
 
-            <div className="center-panel" style={{
+            <div className="center-panel action-panel-shell" style={{
                 maxWidth: '1000px',
                 width: '95%',
                 margin: '0 auto',
@@ -314,12 +314,12 @@ export default function ActionPanel({ context }) {
                 flexDirection: 'column'
             }}>
                 {/* Manual & Operator */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
+                <div className="action-panel-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
                     <button onClick={openManual} className="btn-manual" style={{ width: 'auto', padding: '10px 30px' }}>
                         📖 MANUAL
                     </button>
 
-                    <div style={{ flex: 1, textAlign: 'right' }}>
+                    <div className="action-panel-operator" style={{ flex: 1, textAlign: 'right' }}>
                         <label className="hmi-label" style={{ color: 'var(--neon-cyan)', marginRight: '10px' }}>OPERARIO:</label>
                         <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
                             {context.user?.full_name || "DESCONOCIDO"}
@@ -328,7 +328,7 @@ export default function ActionPanel({ context }) {
                 </div>
 
                 {/* Task List (Checkboxes) */}
-                <div className="tasks-container" style={{
+                <div className="tasks-container action-panel-tasks" style={{
                     maxHeight: '400px',
                     overflowY: 'auto',
                     background: '#111',
@@ -376,7 +376,7 @@ export default function ActionPanel({ context }) {
                             // ------------------------------------
 
                             return (
-                                <div key={plan.id} style={{
+                                <div key={plan.id} className="action-panel-task-row" style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     padding: '10px',
@@ -392,7 +392,7 @@ export default function ActionPanel({ context }) {
                                     />
 
                                     {/* Description + DATE */}
-                                    <span style={{
+                                    <span className="action-panel-task-text" style={{
                                         flex: 1,
                                         color: state.checked ? 'white' : '#aaa',
                                         fontSize: '1.1rem',
@@ -463,8 +463,8 @@ export default function ActionPanel({ context }) {
                         style={{ height: '80px', borderColor: 'var(--neon-green)' }}
                     />
 
-                    <div style={{ marginTop: '15px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                        <div>
+                    <div className="action-panel-meta-row" style={{ marginTop: '15px', display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        <div className="action-panel-duration-box">
                             <label className="hmi-label" style={{ color: 'var(--neon-cyan)', display: 'block' }}>TIEMPO EMPLEADO (MINUTOS):</label>
                             <input
                                 type="number"
@@ -478,7 +478,7 @@ export default function ActionPanel({ context }) {
                                 }}
                             />
                         </div>
-                        <div style={{ flex: 1, borderLeft: '1px solid #333', paddingLeft: '20px' }}>
+                        <div className="action-panel-upload-box" style={{ flex: 1, borderLeft: '1px solid #333', paddingLeft: '20px' }}>
                             <label className="hmi-label" style={{ color: 'var(--neon-purple)', display: 'block' }}>📎 ADJUNTAR DOCUMENTO / FOTO (OPCIONAL):</label>
                             <input
                                 type="file"
@@ -502,7 +502,7 @@ export default function ActionPanel({ context }) {
                     <div style={{ marginTop: '25px', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
                         <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>📦 REPUESTOS UTILIZADOS (Opcional):</label>
 
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                        <div className="action-panel-inventory-row" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
                             <select id="partSelect" className="operator-select" style={{ flex: 1 }}>
                                 <option value="">-- Buscar / Seleccionar Repuesto --</option>
                                 {inventory.filter(p => {
@@ -556,7 +556,7 @@ export default function ActionPanel({ context }) {
                         )}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '20px', marginTop: '25px' }}>
+                    <div className="action-panel-submit-row" style={{ display: 'flex', gap: '20px', marginTop: '25px' }}>
                         <button
                             className="btn-accent"
                             style={{ flex: 1, background: 'var(--neon-green)', color: 'black', fontWeight: 'bold' }}

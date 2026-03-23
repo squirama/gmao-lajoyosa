@@ -137,13 +137,14 @@ export default function AdminScheduler({ allPlans, planExceptions, onSelectEvent
     };
 
     return (
-        <div style={{ height: 800, background: 'white', padding: 20, color: 'black', borderRadius: 8 }}>
+        <div className="admin-scheduler-shell" style={{ height: 800, background: 'white', padding: 20, color: 'black', borderRadius: 8 }}>
             {/* El DndProvider activa el soporte para arrastrar */}
             <DndProvider backend={HTML5Backend}>
                 <DnDCalendar
                     localizer={localizer}
                     events={generateEvents()}
                     style={{ height: 700 }}
+                    className="admin-scheduler-calendar"
                     culture='es'
                     onEventDrop={onEventDrop}
                     onSelectEvent={onSelectEvent}

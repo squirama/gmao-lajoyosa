@@ -42,28 +42,16 @@ function RouteLoadingFallback() {
 
 function AppContent({ context, setContext, logout }) {
     const location = useLocation();
+    const canAccessAdmin = context.user?.role === 'SUPER_ADMIN' || context.user?.role === 'ADMIN' || context.user?.role === 'admin';
 
     return (
         <div className="page-container">
             {context.token && !location.pathname.startsWith('/admin') && (
-                <>
-                    {(context.user?.role === 'SUPER_ADMIN' || context.user?.role === 'ADMIN' || context.user?.role === 'admin') && (
+                <div className="app-floating-actions">
+                    {canAccessAdmin && (
                         <button
                             onClick={() => window.location.href = '/admin/assets'}
-                            style={{
-                                position: 'fixed',
-                                top: '20px',
-                                right: '20px',
-                                zIndex: 2000,
-                                background: '#0ea5e9',
-                                color: 'white',
-                                border: 'none',
-                                padding: '8px 16px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                            }}
+                            className="app-floating-btn app-floating-btn--admin"
                         >
                             Panel Admin
                         </button>
@@ -71,22 +59,11 @@ function AppContent({ context, setContext, logout }) {
 
                     <button
                         onClick={logout}
-                        style={{
-                            position: 'fixed',
-                            top: '20px',
-                            left: '20px',
-                            zIndex: 2000,
-                            background: 'rgba(0,0,0,0.5)',
-                            color: '#888',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                        }}
+                        className="app-floating-btn app-floating-btn--logout"
                     >
                         Salir
                     </button>
-                </>
+                </div>
             )}
 
             <Suspense fallback={<RouteLoadingFallback />}>

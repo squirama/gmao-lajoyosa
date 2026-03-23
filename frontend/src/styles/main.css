@@ -34,7 +34,7 @@ body {
 .page-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 /* Header */
@@ -212,6 +212,7 @@ button {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .btn-large,
@@ -245,6 +246,40 @@ button {
   font-size: 2.5rem;
   margin-top: 40px;
   text-transform: uppercase;
+}
+
+.app-floating-actions {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.app-floating-btn {
+  pointer-events: auto;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.app-floating-btn--admin {
+  background: #0ea5e9;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+
+.app-floating-btn--logout {
+  background: rgba(0, 0, 0, 0.5);
+  color: #c2c8cf;
+  padding: 6px 12px;
+  border-radius: 6px;
 }
 
 /* Admin Card Fix */
@@ -300,4 +335,188 @@ button {
 /* Ensure content doesn't get hidden behind nav */
 .page-container {
   padding-bottom: 110px;
+}
+
+@media (max-width: 900px) {
+  .page-container {
+    padding-bottom: 96px;
+    align-items: center;
+  }
+
+  .title {
+    font-size: 1.8rem;
+    margin-top: 76px;
+    margin-bottom: 10px;
+    padding: 0 16px;
+  }
+
+  .grid-menu,
+  .hmi-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+    width: min(100%, 620px);
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .btn-large,
+  .hmi-btn {
+    min-height: 84px;
+    padding: 18px;
+    font-size: 1.1rem;
+  }
+
+  .app-floating-actions {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .app-floating-btn--admin,
+  .app-floating-btn--logout {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+
+  .bottom-nav {
+    height: 78px;
+    padding: 8px 10px;
+    gap: 12px;
+  }
+
+  .bottom-nav button {
+    height: 58px;
+    font-size: 1rem;
+  }
+
+  .action-panel-page .hmi-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+  }
+
+  .action-panel-page .machine-name {
+    width: 100%;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+
+  .action-panel-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 12px 130px !important;
+    box-sizing: border-box;
+  }
+
+  .action-panel-topbar,
+  .action-panel-meta-row,
+  .action-panel-inventory-row,
+  .action-panel-submit-row,
+  .action-panel-alert-item,
+  .action-panel-postpone-box {
+    flex-wrap: wrap;
+  }
+
+  .action-panel-topbar {
+    gap: 12px;
+    align-items: stretch !important;
+  }
+
+  .action-panel-page .hmi-header > *,
+  .action-panel-topbar > *,
+  .action-panel-meta-row > *,
+  .action-panel-inventory-row > *,
+  .action-panel-submit-row > *,
+  .action-panel-alert-item > *,
+  .action-panel-task-row > * {
+    min-width: 0;
+  }
+
+  .action-panel-topbar .btn-manual,
+  .action-panel-submit-row > button,
+  .action-panel-alert-item .btn-manual,
+  .action-panel-alert-item .btn-danger,
+  .action-panel-postpone-box .btn-manual,
+  .action-panel-postpone-box .btn-danger {
+    width: 100%;
+  }
+
+  .action-panel-operator {
+    text-align: left !important;
+    width: 100%;
+  }
+
+  .action-panel-tasks {
+    max-height: none !important;
+  }
+
+  .action-panel-task-row {
+    gap: 10px;
+    align-items: flex-start !important;
+    flex-wrap: nowrap;
+  }
+
+  .action-panel-task-text {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 1rem !important;
+  }
+
+  .action-panel-duration-box,
+  .action-panel-upload-box {
+    width: 100%;
+  }
+
+  .action-panel-upload-box {
+    border-left: none !important;
+    padding-left: 0 !important;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+  }
+
+  .action-panel-duration-box input,
+  .action-panel-inventory-row input,
+  .action-panel-postpone-box input,
+  .action-panel-postpone-box textarea,
+  .action-panel-postpone-box select {
+    font-size: 16px !important;
+  }
+
+  .action-panel-inventory-row .operator-select,
+  .action-panel-inventory-row input,
+  .action-panel-inventory-row .hmi-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .action-panel-page .tasks-container,
+  .action-panel-page .hmi-textarea,
+  .action-panel-page .operator-select,
+  .action-panel-page input,
+  .action-panel-page textarea,
+  .action-panel-page select {
+    box-sizing: border-box;
+  }
+
+  .action-panel-page .blink {
+    margin-right: 0 !important;
+  }
+
+  .action-panel-inventory-row input {
+    text-align: left !important;
+  }
+
+  .action-panel-alert-modal {
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
 }

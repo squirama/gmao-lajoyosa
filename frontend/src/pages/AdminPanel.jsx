@@ -37,6 +37,18 @@ const ADMIN_SECTIONS = [
     'reports',
 ];
 
+const ADMIN_SECTION_LABELS = {
+    planning: 'Calendario',
+    locations: 'Sedes',
+    departments: 'Areas',
+    assets: 'Maquinas',
+    plans: 'Planes',
+    inventory: 'Inventario',
+    legal: 'Normativa',
+    users: 'Operarios',
+    reports: 'Informes',
+};
+
 export default function AdminPanel() {
     const navigate = useNavigate();
     const { section } = useParams();
@@ -110,6 +122,7 @@ export default function AdminPanel() {
     } = useAdminReports(authHeader);
 
     const [loading, setLoading] = useState(false);
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
     // Modal state.
     const [calendarAsset, setCalendarAsset] = useState(null);
@@ -153,6 +166,10 @@ export default function AdminPanel() {
             refreshUsers();
         }
     }, [activeTab, authHeader]);
+
+    useEffect(() => {
+        setIsMobileNavOpen(false);
+    }, [activeTab]);
 
     // Login.
     const handleLogin = async (e) => {
@@ -238,8 +255,9 @@ export default function AdminPanel() {
     return (
         <div className="admin-layout">
             <AdminErrorBoundary>
+                {isMobileNavOpen && <button className="admin-mobile-backdrop" onClick={() => setIsMobileNavOpen(false)} aria-label="Cerrar navegacion admin" />}
                 {/* Sidebar */}
-                <div className="admin-sidebar">
+                <div className={`admin-sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`}>
                     <div className="sidebar-brand">GMAO ADMIN <span style={{ fontSize: '0.6rem', color: '#666' }}>v1.2</span></div>
 
                     <button onClick={() => goToAdminSection('planning')} className={`sidebar-btn ${activeTab === 'planning' ? 'active' : ''}`}>Calendario</button>
@@ -265,6 +283,12 @@ export default function AdminPanel() {
 
                 {/* Main content */}
                 <div className="admin-content">
+                    <div className="admin-mobile-toolbar">
+                        <button className="btn-manual" onClick={() => setIsMobileNavOpen((value) => !value)}>
+                            {isMobileNavOpen ? 'Cerrar menu' : 'Menu admin'}
+                        </button>
+                        <div className="admin-mobile-current">{ADMIN_SECTION_LABELS[activeTab]}</div>
+                    </div>
 
                     {/* A. CALENDARIO */}
                     {activeTab === 'planning' && (
