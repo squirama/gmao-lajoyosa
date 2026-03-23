@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GMAO - Panel Maestro</title>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #38bdf8;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 800px;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: #38bdf8;
+            margin-top: 0;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #cbd5e1;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background: #0ea5e9;
+        }
+
+        .res {
+            font-size: 0.9em;
+            margin-top: 10px;
+            font-weight: bold;
+            text-align: center;
+            height: 20px;
+        }
+
+        /* List Styles */
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #0f172a;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-sm {
+            width: auto;
+            margin: 0;
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+
+        .btn-edit {
+            background: #fbbf24;
+            color: #000;
+        }
+
+        .btn-del {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Modal */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #modal-content {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #38bdf8;
+        }
+
+        #calendar {
+            background: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            height: 700px;
+        }
+    </style>
+    <style>
+        /* LOGIN OVERLAY */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid #38bdf8;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 style="color: #38bdf8; margin-bottom: 20px;">🔐 Admin Login</h2>
+            <input type="text" id="loginUser" placeholder="Usuario" style="margin-bottom: 10px;">
+            <input type="password" id="loginPass" placeholder="Contraseña" style="margin-bottom: 20px;">
+            <button onclick="login()" style="width: 100%;">ENTRAR</button>
+            <p id="loginError" style="color: #ef4444; margin-top: 10px; display: none;"></p>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT (Wrapped to hide initially) -->
+    <div id="app-content" class="hidden">
+        <h1 style="text-align: center; color: #38bdf8;">⚙️ Gestión Integral GMAO</h1>
+
+        <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px;">
+            <button onclick="window.location.href='/'" style="width: auto; background: #334155; color: white;">🏠 App
+                Usuario</button>
+            <button onclick="logout()" style="width: auto; background: #ef4444; color: white;">🚪 Salir</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab('sedes')">📍 Sedes</button>
+            <button class="tab-btn" onclick="openTab('deptos')">🏢 Deptos</button>
+            <button class="tab-btn" onclick="openTab('maquinas')">🏭 Máquinas</button>
+            <button class="tab-btn" onclick="openTab('operarios')">👷 Operarios</button>
+            <button class="tab-btn" onclick="openTab('planes')">📋 Planes</button>
+            <button class="tab-btn" onclick="openTab('calendario')">📅 Calendario</button>
+            <button class="tab-btn" onclick="openTab('informes')">📊 Informes</button>
+        </div>
+
+        <!-- MODAL -->
+        <div id="modal">
+            <div id="modal-content">
+                <h2 id="modalTitle">Editar</h2>
+                <div id="modalBody"></div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="closeModal()" style="background: #ef4444; margin: 0;">Cancelar</button>
+                    <button id="modalSaveBtn" style="background: #22c55e; margin: 0;">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. SEDES -->
+        <div id="sedes" class="tab-content active">
+            <div class="card">
+                <h2>📍 Nueva Sede</h2>
+                <label>Nombre:</label> <input type="text" id="locName">
+                <label>Dirección:</label> <input type="text" id="locAddress">
+                <label>Email Aviso:</label> <input type="email" id="locEmail" placeholder="email@sede.com">
+                <button onclick="createLocation()">CREAR SEDE</button>
+            </div>
+            <div class="card">
+                <h2>📋 Listado de Sedes</h2>
+                <ul id="locList"></ul>
+            </div>
+        </div>
+
+        <!-- 2. DEPTOS -->
+        <div id="deptos" class="tab-content">
+            <div class="card">
+                <h2>🏢 Nuevo Departamento</h2>
+                <label>Sede:</label> <select id="deptLocSelect"></select>
+                <label>Nombre:</label> <input type="text" id="deptName">
+                <label>Email Aviso:</label> <input type="email" id="deptEmail" placeholder="email@depto.com">
+                <button onclick="createDepartment()">CREAR DEPTO</button>
+            </div>
+            <div class="card">
+                <h2>📋 Listado de Deptos</h2>
+                <ul id="deptList"></ul>
+            </div>
+        </div>
+
+        <!-- 3. MAQUINAS -->
+        <div id="maquinas" class="tab-content">
+            <div class="card">
+                <h2>🏭 Nueva Máquina</h2>
+                <label>Departamento:</label> <select id="assetDeptSelect"></select>
+                <label>Nombre:</label> <input type="text" id="assetName">
+                <label>Marca:</label> <input type="text" id="assetBrand">
+                <label>Modelo:</label> <input type="text" id="assetModel">
+                <label>Manual (PDF):</label> <input type="file" id="assetManual" accept=".pdf">
+                <button onclick="createAsset()">CREAR MÁQUINA</button>
+            </div>
+            <div class="card">
+                <h2>📋 Listado de Máquinas</h2>
+                <ul id="assetList"></ul>
+            </div>
+        </div>
+
+        <!-- 4. OPERARIOS -->
+        <div id="operarios" class="tab-content">
+            <div class="card">
+                <h2>👷 Nuevo Operario / Usuario</h2>
+                <label>Nombre Completo:</label> <input type="text" id="opName">
+                <label>Usuario (Login):</label> <input type="text" id="opUsername">
+                <label>Contraseña:</label> <input type="password" id="opPassword">
+
+                <label style="margin-top: 15px; margin-bottom: 5px;">Acceso a Departamentos:</label>
+                <div id="opDeptChecks"
+                    style="max-height: 150px; overflow-y: auto; background: #0f172a; padding: 10px; border: 1px solid #334155; border-radius: 6px;">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <button onclick="createOperator()">CREAR USUARIO</button>
+            </div>
+            <div class="card">
+                <h2>📋 Listado de Operarios</h2>
+                <ul id="opList"></ul>
+            </div>
+        </div>
+
+        <!-- 5. PLANES -->
+        <div id="planes" class="tab-content">
+            <div class="card">
+                <h2>📋 Nuevo Plan</h2>
+                <label>Máquina:</label> <select id="planAssetSelect"></select>
+                <label>Tarea:</label> <input type="text" id="planTask">
+                <label>Frecuencia (días):</label> <input type="number" id="planFreq">
+                <label>Fecha Inicio:</label> <input type="date" id="planStart">
+                <label>Email Específico (Opcional):</label> <input type="email" id="planEmail"
+                    placeholder="ej: tecnico@externo.com">
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="planNotify" style="width: 20px; margin: 0;">
+                    <label style="margin: 0;">Avisar por Email</label>
+                </div>
+                <button onclick="createPlan()">CREAR PLAN</button>
+            </div>
+            <div class="card">
+                <h2>📋 Listado de Planes</h2>
+                <ul id="planList"></ul>
+            </div>
+        </div>
+
+        <!-- 6. CALENDARIO -->
+        <div id="calendario" class="tab-content">
+            <div id="calendar" class="flex-1 bg-gray-900 p-4 rounded-lg"></div>
+            <div class="mt-4 flex gap-4">
+                <button onclick="exportCalendar()"
+                    class="s-btn bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded">
+                    📅 EXPORTAR CALENDARIO (.ICS)
+                </button>
+            </div>
+        </div>
+
+        <!-- 7. INFORMES -->
+        <div id="informes" class="tab-content">
+            <h2 class="text-3xl text-cyan-400 mb-6 font-bold uppercase tracking-wider border-b border-gray-700 pb-2">
+                📊 GENERADOR DE INFORMES
+            </h2>
+
+            <!-- FILTERS -->
+            <div class="card mb-8">
+                <h3 class="text-xl text-yellow-400 mb-4">1. FILTROS DE BÚSQUEDA</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-400 mb-2">Fecha Inicio:</label>
+                        <input type="date" id="reportStartDate" class="s-input">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-2">Fecha Fin:</label>
+                        <input type="date" id="reportEndDate" class="s-input">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-2">Máquina (Opcional):</label>
+                        <select id="reportAssetId" class="s-input">
+                            <option value="">-- TODAS LAS MÁQUINAS --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DOWNLOAD BUTTONS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- REPORT 1 -->
+                <div class="card border border-green-600 hover:bg-green-900/20 transition duration-300">
+                    <h3 class="text-xl text-green-400 mb-2 font-bold">✅ PREVENTIVOS (Compliance)</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        Listado de mantenimientos programados realizados. Compara fechas y operarios.
+                    </p>
+                    <button onclick="downloadReport('history')"
+                        class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2">
+                        📥 DESCARGAR CSV
+                    </button>
+                </div>
+
+                <!-- REPORT 2 -->
+                <div class="card border border-red-600 hover:bg-red-900/20 transition duration-300">
+                    <h3 class="text-xl text-red-400 mb-2 font-bold">🚨 AVERÍAS (Correctivo)</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        Intervenciones correctivas con duración, problema y solución aplicada.
+                    </p>
+                    <button onclick="downloadReport('interventions')"
+                        class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2">
+                        📥 DESCARGAR CSV
+                    </button>
+                </div>
+
+                <!-- REPORT 3 -->
+                <div class="card border border-blue-600 hover:bg-blue-900/20 transition duration-300">
+                    <h3 class="text-xl text-blue-400 mb-2 font-bold">📩 SOLICITUDES</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        Peticiones realizadas por operarios desde planta (Botón Rojo).
+                    </p>
+                    <button onclick="downloadReport('requests')"
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2">
+                        📥 DESCARGAR CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const API = '/api/admin'; // Base path for admin
+            // Note: Login is at /api/login (Public)
+
+            // --- AUTH LOGIC ---
+            function checkAuth() {
+                const token = localStorage.getItem('session_token');
+                if (token) {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-content').classList.remove('hidden');
+                    loadData(); // Load data only after auth check
+                } else {
+                    document.getElementById('login-screen').classList.remove('hidden');
+                    document.getElementById('app-content').classList.add('hidden');
+                }
+            }
+
+            async function login() {
+                const u = document.getElementById('loginUser').value;
+                const p = document.getElementById('loginPass').value;
+                const err = document.getElementById('loginError');
+
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: u, password: p })
+                    });
+
+                    if (!res.ok) throw new Error('Credenciales inválidas');
+
+                    const data = await res.json();
+
+                    // Enforce Admin Role Check
+                    const r = data.user.role;
+                    if (r !== 'admin' && r !== 'ADMIN' && r !== 'SUPER_ADMIN') {
+                        throw new Error('No tienes permisos de administrador');
+                    }
+
+                    localStorage.setItem('session_token', data.token);
+                    localStorage.setItem('user_info', JSON.stringify(data.user));
+                    checkAuth();
+                } catch (e) {
+                    err.innerText = e.message;
+                    err.style.display = 'block';
+                }
+            }
+
+            function logout() {
+                localStorage.removeItem('session_token');
+                localStorage.removeItem('user_info');
+                location.href = '/';
+            }
+
+            const v = (id) => document.getElementById(id).value;
+            const vSet = (id, val) => document.getElementById(id).value = val;
+
+            // --- REPORTS LOGIC ---
+            function downloadReport(type) {
+                const start = document.getElementById('reportStartDate').value;
+                const end = document.getElementById('reportEndDate').value;
+                const assetId = document.getElementById('reportAssetId').value;
+
+                if (!start || !end) {
+                    alert('⚠️ Por favor, selecciona Fecha Inicio y Fecha Fin.');
+                    return;
+                }
+
+                let url = `/api/reports/${type}?start=${start}&end=${end}`;
+                if (assetId) url += `&asset_id=${assetId}`;
+
+                // Add Auth Token
+                const token = localStorage.getItem('session_token');
+
+                // Trigger Download via fetch to handle headers or window.open with token if cookie?
+                // API expects Bearer token header. window.open won't send header.
+                // We must use fetch + blob.
+
+                fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error("Error al generar informe");
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${type}_${start}_${end}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(err => alert('❌ Error: ' + err.message));
+            }
+
+            // --- CRUD HELPERS ---
+            async function fetchAPI(endpoint, method = 'GET', body = null) {
+                const token = localStorage.getItem('session_token');
+                if (!token) { logout(); return; }
+
+                const opts = { method, headers: { 'Authorization': 'Bearer ' + token } };
+
+                if (body && !(body instanceof FormData)) {
+                    opts.headers['Content-Type'] = 'application/json';
+                    opts.body = JSON.stringify(body);
+                } else if (body instanceof FormData) {
+                    opts.body = body;
+                }
+
+                try {
+                    const res = await fetch(API + endpoint, opts);
+                    if (res.status === 401) { logout(); throw new Error('Sesión Expirada'); }
+                    if (!res.ok) throw new Error(await res.text());
+                    return await res.json();
+                } catch (e) {
+                    alert('❌ Error: ' + e.message);
+                    throw e;
+                }
+            }
+
+            async function createLocation() {
+                await fetchAPI('/locations', 'POST', {
+                    name: v('locName'),
+                    address: v('locAddress'),
+                    email: v('locEmail')
+                });
+                alert('✅ Sede creada'); loadData();
+            }
+
+            async function createDepartment() {
+                await fetchAPI('/departments', 'POST', {
+                    location_id: v('deptLocSelect'),
+                    name: v('deptName'),
+                    email: v('deptEmail')
+                });
+                alert('✅ Depto creado'); loadData();
+            }
+
+            async function createOperator() {
+                const checkboxes = document.querySelectorAll('input[name="opDeptCheck"]:checked');
+                const deptIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+                await fetchAPI('/operators', 'POST', {
+                    full_name: v('opName'),
+                    username: v('opUsername'),
+                    password: v('opPassword'),
+                    department_ids: deptIds,
+                    role: 'operator'
+                });
+                alert('✅ Usuario creado'); loadData();
+            }
+
+            async function createPlan() {
+                await fetchAPI('/plans', 'POST', {
+                    asset_id: v('planAssetSelect'),
+                    task_description: v('planTask'),
+                    frequency_days: parseInt(v('planFreq')),
+                    start_date: v('planStart'),
+                    notification_email: v('planEmail'),
+                    notify_external: document.getElementById('planNotify').checked
+                });
+                alert('✅ Plan creado'); loadData();
+            }
+
+            // ASSET CREATION + MANUAL UPLOAD
+            async function createAsset() {
+                try {
+                    // 1. Create Asset
+                    const asset = await fetchAPI('/assets', 'POST', {
+                        dept_id: v('assetDeptSelect'),
+                        name: v('assetName'),
+                        brand: v('assetBrand'),
+                        model: v('assetModel')
+                    });
+
+                    // 2. Upload Manual if exists
+                    const fileInput = document.getElementById('assetManual');
+                    if (fileInput.files.length > 0) {
+                        const formData = new FormData();
+                        formData.append('manual', fileInput.files[0]);
+                        await fetchAPI(`/asset/${asset.id}/manual`, 'POST', formData);
+                        alert('✅ Máquina creada y manual subido.');
+                    } else {
+                        alert('✅ Máquina creada (sin manual).');
+                    }
+                    loadData();
+                } catch (e) { console.error(e); }
+            }
+
+            // --- DELETE ---
+            async function del(endpoint, id) {
+                if (!confirm('¿Seguro que quieres borrar?')) return;
+                await fetchAPI(`${endpoint}/${id}`, 'DELETE');
+                loadData();
+            }
+
+            // --- EDIT MODAL ---
+            const modal = document.getElementById('modal');
+            async function openEdit(type, data) {
+                modal.style.display = 'flex';
+                const body = document.getElementById('modalBody');
+                const btn = document.getElementById('modalSaveBtn');
+                body.innerHTML = ''; // Clear
+
+                if (type === 'location') {
+                    body.innerHTML = `
+                    <label>Nombre:</label> <input type="text" id="editLocName" value="${data.name}">
+                    <label>Dirección:</label> <input type="text" id="editLocAddr" value="${data.address || ''}">
+                    <label>Email Aviso:</label> <input type="email" id="editLocEmail" value="${data.email || ''}">
+                `;
+                    btn.onclick = async () => {
+                        await fetchAPI(`/locations/${data.id}`, 'PUT', {
+                            name: v('editLocName'),
+                            address: v('editLocAddr'),
+                            email: v('editLocEmail')
+                        });
+                        closeModal(); loadData();
+                    };
+                } else if (type === 'department') {
+                    body.innerHTML = `
+                    <label>Nombre:</label> <input type="text" id="editDeptName" value="${data.name}">
+                     <label>Sede ID:</label> <input type="text" id="editDeptLoc" value="${data.location_id}">
+                     <label>Email Aviso:</label> <input type="email" id="editDeptEmail" value="${data.email || ''}">
+                `;
+                    btn.onclick = async () => {
+                        await fetchAPI(`/departments/${data.id}`, 'PUT', {
+                            name: v('editDeptName'),
+                            location_id: v('editDeptLoc'),
+                            email: v('editDeptEmail')
+                        });
+                        closeModal(); loadData();
+                    };
+                } else if (type === 'operator') {
+                    const token = localStorage.getItem('session_token');
+                    const conf = await fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+
+                    const locMap = {};
+                    conf.locations.forEach(l => locMap[l.id] = l.name);
+
+                    // Pre-checked
+                    const assigned = data.department_ids || [];
+
+                    const deptChecks = conf.departments.map(d => {
+                        const checked = assigned.includes(d.id) ? 'checked' : '';
+                        return `
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <input type="checkbox" name="editOpDeptCheck" value="${d.id}" ${checked} style="width: auto; margin-right: 10px;">
+                        <span>${d.name} <b>(${locMap[d.location_id] || 'Sede ' + d.location_id})</b></span>
+                    </div>`;
+                    }).join('');
+
+                    body.innerHTML = `
+                    <label>Nombre:</label> <input type="text" id="editOpName" value="${data.full_name}">
+                    <label>Usuario:</label> <input type="text" id="editOpUser" value="${data.username || ''}">
+                    <label>Nueva Contraseña (Dejar en blanco para no cambiar):</label> <input type="password" id="editOpPass">
+                    <label>Departamentos:</label>
+                    <div style="max-height: 150px; overflow-y: auto; background: #0f172a; padding: 10px; border: 1px solid #334155; border-radius: 6px;">
+                        ${deptChecks}
+                    </div>
+                `;
+                    btn.onclick = async () => {
+                        const checkboxes = document.querySelectorAll('input[name="editOpDeptCheck"]:checked');
+                        const deptIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+                        const payload = {
+                            full_name: v('editOpName'),
+                            username: v('editOpUser'),
+                            department_ids: deptIds,
+                            role: data.role
+                        };
+                        if (v('editOpPass')) payload.password = v('editOpPass');
+
+                        await fetchAPI(`/operators/${data.id}`, 'PUT', payload);
+                        closeModal(); loadData();
+                    };
+                } else if (type === 'plan') {
+                    body.innerHTML = `
+                    <label>Tarea:</label> <input type="text" id="editPlanTask" value="${data.task_description}">
+                    <label>Frecuencia:</label> <input type="number" id="editPlanFreq" value="${data.frequency_days}">
+                    <label>Máquina ID:</label> <input type="text" id="editPlanAsset" value="${data.asset_id}">
+                    <label>Email Específico (Opcional):</label> <input type="email" id="editPlanEmail" value="${data.notification_email || ''}">
+                    <div style="margin-top:10px"><input type="checkbox" id="editPlanNotify" ${data.notify_external ? 'checked' : ''}> Avisar Email</div>
+                `;
+                    btn.onclick = async () => {
+                        await fetchAPI(`/plans/${data.id}`, 'PUT', {
+                            task_description: v('editPlanTask'),
+                            frequency_days: parseInt(v('editPlanFreq')),
+                            asset_id: v('editPlanAsset'),
+                            notification_email: v('editPlanEmail'),
+                            notify_external: document.getElementById('editPlanNotify').checked
+                        });
+                        closeModal(); loadData();
+                    };
+                } else if (type === 'asset') {
+                    alert('Edición de activo no implementada en modal. Usa Borrar y Crear de nuevo por ahora.');
+                    closeModal();
+                    return;
+                }
+            }
+
+            function closeModal() { modal.style.display = 'none'; }
+
+            // --- LOAD DATA ---
+            async function loadData() {
+                // 1. Config
+                let conf;
+                try {
+                    const token = localStorage.getItem('session_token');
+                    conf = await fetch('/api/config', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }).then(r => r.json());
+                } catch (e) { console.error(e); }
+
+                // FILL SELECTS
+                const fill = (id, arr, fn) => document.getElementById(id).innerHTML = arr.map(i => `<option value="${i.id}">${fn(i)}</option>`).join('');
+                fill('deptLocSelect', conf.locations, l => l.name);
+                fill('assetDeptSelect', conf.departments, d => `${d.name} (Sede ${d.location_id})`);
+
+                // LISTS
+                // Locations
+                document.getElementById('locList').innerHTML = conf.locations.map(l => `
+                <li>
+                    <span>${l.name} (${l.address || '-'})</span>
+                    <div class="actions">
+                        <button class="btn-sm btn-edit" onclick='openEdit("location", ${JSON.stringify(l)})'>✏️</button>
+                        <button class="btn-sm btn-del" onclick="del('/locations', ${l.id})">🗑️</button>
+                    </div>
+                </li>`).join('');
+
+                // Departments
+                document.getElementById('deptList').innerHTML = conf.departments.map(d => `
+                <li>
+                    <span>${d.name} (Sede ${d.location_id})</span>
+                    <div class="actions">
+                        <button class="btn-sm btn-edit" onclick='openEdit("department", ${JSON.stringify(d)})'>✏️</button>
+                        <button class="btn-sm btn-del" onclick="del('/departments', ${d.id})">🗑️</button>
+                    </div>
+                </li>`).join('');
+
+                // 2. Operators
+                const ops = await fetchAPI('/operators');
+
+                // Helper for Loc Names
+                const locMap = {};
+                conf.locations.forEach(l => locMap[l.id] = l.name);
+
+                // Populate Create Form Dept Checkboxes
+                document.getElementById('opDeptChecks').innerHTML = conf.departments.map(d => `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <input type="checkbox" name="opDeptCheck" value="${d.id}" style="width: auto; margin-right: 10px;">
+                    <span>${d.name} <b>(${locMap[d.location_id] || 'Sede ' + d.location_id})</b></span>
+                </div>
+            `).join('');
+
+                document.getElementById('opList').innerHTML = ops.map(o => `
+                 <li>
+                    <span>${o.full_name} (${o.username || 'Sin usuario'})</span>
+                    <div class="actions">
+                        <button class="btn-sm btn-edit" onclick='openEdit("operator", ${JSON.stringify(o)})'>✏️</button>
+                        <button class="btn-sm btn-del" onclick="del('/operators', ${o.id})">🗑️</button>
+                    </div>
+                </li>`).join('');
+
+                // 3. Assets
+                const assets = await fetchAPI('/assets');
+                fill('planAssetSelect', assets, a => `${a.name} (${a.brand})`);
+                document.getElementById('assetList').innerHTML = assets.map(a => `
+                <li>
+                    <span>${a.name} - ${a.brand} ${a.model} [${a.dept_name}]</span>
+                    <div class="actions">
+                        <button class="btn-sm btn-edit" onclick='openEdit("asset", ${JSON.stringify(a)})'>✏️</button>
+                        <button class="btn-sm btn-del" onclick="del('/assets', ${a.id})">🗑️</button>
+                    </div>
+                </li>`).join('');
+
+                // 4. Plans
+                document.getElementById('planList').innerHTML = conf.plans.map(p => `
+                 <li>
+                    <span><b>#${p.id}</b> ${p.asset_name || 'Sin Máquina'}: ${p.task_description} (${p.frequency_days}d) - Prox: ${p.next_due_date ? p.next_due_date.split('T')[0] : '?'}</span>
+                    <div class="actions">
+                        <button class="btn-sm btn-edit" onclick='openEdit("plan", ${JSON.stringify(p)})'>✏️</button>
+                        <button class="btn-sm btn-del" onclick="del('/plans', ${p.id})">🗑️</button>
+                    </div>
+                </li>`).join('');
+            }
+
+            // TABS
+            function openTab(id) {
+                document.querySelectorAll('.tab-content').forEach(d => d.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                event.target.classList.add('active');
+                if (id === 'calendario') setTimeout(() => window.calendar.render(), 100);
+            }
+
+            // CALENDAR INIT
+            document.addEventListener('DOMContentLoaded', function () {
+                // Init Auth Check
+                checkAuth();
+
+                var calendarEl = document.getElementById('calendar');
+                window.calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'es',
+                    headerToolbar: { center: 'title' },
+                    events: async function (info, successCallback, failureCallback) {
+                        try {
+                            const token = localStorage.getItem('session_token');
+                            const res = await fetch('/api/calendar/events', {
+                                headers: { 'Authorization': 'Bearer ' + token }
+                            });
+                            const events = await res.json();
+                            successCallback(events);
+                        } catch (e) {
+                            failureCallback(e);
+                        }
+                    },
+                    editable: true,
+                    eventDrop: async function (info) {
+                        // Extract real plan ID from extendedProps or parse ID string (plan_ID_Index)
+                        const planId = info.event.extendedProps.plan_id || info.event.id.split('_')[1];
+                        if (!planId) return alert("Error: ID de plan no válido");
+
+                        // Fix Timezone Issue: Construct YYYY-MM-DD using local time
+                        const d = info.event.start;
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const dateStr = `${year}-${month}-${day}`;
+
+                        await fetchAPI(`/maintenance-plans/${planId}/reschedule`, 'PUT', {
+                            new_date: dateStr
+                        });
+                    }
+                });
+            });
+        </script>
+</body>
+
+</html>
