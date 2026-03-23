@@ -1,14 +1,14 @@
 /* HMI / Neon Theme for Admin Panel */
 :root {
-    --bg-dark: #050505;
-    --panel-bg: #111111;
-    --neon-cyan: #00FFFF;
-    --neon-green: #00FF00;
-    --neon-red: #FF0000;
-    --neon-orange: #FFA500;
-    --text-main: #ffffff;
+    --bg-dark: #121212;
+    --panel-bg: #1e272e;
+    --neon-cyan: #5dade2;
+    --neon-green: #2ecc71;
+    --neon-red: #c0392b;
+    --neon-orange: #e67e22;
+    --text-main: #eeeeee;
     --radius: 12px;
-    --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.4);
+    --glow-cyan: 0 6px 16px rgba(0, 0, 0, 0.22);
 }
 
 body {
@@ -27,12 +27,12 @@ body {
 
 .admin-sidebar {
     width: 260px;
-    background: #020202;
-    border-right: 2px solid var(--neon-cyan);
+    background: #1a2430;
+    border-right: 1px solid #34424f;
     display: flex;
     flex-direction: column;
     padding: 20px;
-    box-shadow: 4px 0 15px rgba(0, 255, 255, 0.1);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.18);
     z-index: 10;
     flex-shrink: 0;
 }
@@ -41,19 +41,18 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 30px;
-    background: radial-gradient(circle at top right, #1a1a1a 0%, #050505 100%);
+    background: linear-gradient(180deg, #151b22 0%, #121212 100%);
     position: relative;
 }
 
 /* Sidebar Branding */
 .sidebar-brand {
     font-size: 1.5rem;
-    color: var(--neon-cyan);
+    color: #f39c12;
     font-weight: bold;
     text-align: center;
     margin-bottom: 30px;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #34424f;
     padding-bottom: 20px;
 }
 
@@ -61,7 +60,7 @@ body {
 .sidebar-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: #c7d0d9;
     padding: 15px 20px;
     text-align: left;
     font-size: 1.1rem;
@@ -78,29 +77,28 @@ body {
 
 .sidebar-btn:hover {
     color: white;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     padding-left: 25px;
-    /* Slide effect */
 }
 
 .sidebar-btn.active {
-    background: rgba(0, 255, 255, 0.1);
-    color: var(--neon-cyan);
-    border-left: 4px solid var(--neon-cyan);
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    background: #24313b;
+    color: #ffffff;
+    border-left: 4px solid #f39c12;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
 /* Sidebar Footer */
 .sidebar-footer {
     margin-top: auto;
-    border-top: 1px solid #333;
+    border-top: 1px solid #34424f;
     padding-top: 20px;
 }
 
 /* Large HMI Buttons */
 .hmi-btn {
-    background: rgba(0, 255, 255, 0.05);
-    border: 2px solid var(--neon-cyan);
+    background: #2980b9;
+    border: 2px solid #2471a3;
     color: white;
     padding: 15px 25px;
     font-size: 1.2rem;
@@ -119,19 +117,19 @@ body {
 
 .hmi-btn:hover,
 .hmi-btn.active {
-    background: rgba(0, 255, 255, 0.2);
-    box-shadow: 0 0 20px var(--neon-cyan);
+    background: #2471a3;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
     transform: scale(1.02);
 }
 
 /* Cards */
 .card {
-    background: #111;
-    border: 1px solid var(--neon-cyan);
+    background: var(--panel-bg);
+    border: 1px solid #3b4650;
     padding: 30px;
     border-radius: var(--radius);
     margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
 }
 
 /* Utilities */
@@ -143,15 +141,15 @@ body {
 
 .hmi-header {
     background: transparent;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #34424f;
     padding: 0 0 20px 0;
     margin-bottom: 30px;
     box-shadow: none;
 }
 
 h2 {
-    color: var(--neon-cyan);
-    border-bottom: 1px solid #333;
+    color: #f39c12;
+    border-bottom: 1px solid #34424f;
     padding-bottom: 10px;
     margin-top: 0;
 }
@@ -159,8 +157,8 @@ h2 {
 /* Inputs */
 input,
 select {
-    background: #000;
-    border: 1px solid #333;
+    background: #2c3e50;
+    border: 1px solid #435364;
     color: white;
     padding: 12px;
     border-radius: 6px;
@@ -170,14 +168,14 @@ select {
 
 input:focus,
 select:focus {
-    border-color: var(--neon-cyan);
+    border-color: #5dade2;
     outline: none;
 }
 
 /* Table/List Items */
 .list-item {
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: #24313b;
+    border: 1px solid #3b4650;
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 8px;
@@ -187,25 +185,29 @@ select:focus {
 }
 
 .btn-danger {
-    background: rgba(255, 0, 0, 0.1);
-    border: 1px solid red;
-    color: red;
+    background: #c0392b;
+    border: 1px solid #a93226;
+    color: white;
     padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
 }
 
 .btn-danger:hover {
-    background: rgba(255, 0, 0, 0.3);
+    background: #a93226;
 }
 
 .btn-manual {
-    background: transparent;
-    border: 1px solid #aaa;
-    color: #aaa;
+    background: #2c3e50;
+    border: 1px solid #435364;
+    color: #eef2f5;
     padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
+}
+
+.btn-manual:hover {
+    background: #34495e;
 }
 
 /* Calendar Override */

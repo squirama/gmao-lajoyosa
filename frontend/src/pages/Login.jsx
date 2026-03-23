@@ -36,16 +36,16 @@ export default function Login({ setContext }) {
     return (
         <div style={{
             display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
-            background: '#050505', color: 'white', fontFamily: 'Segoe UI, sans-serif'
+            background: '#121212', color: '#eeeeee', fontFamily: 'Segoe UI, sans-serif'
         }}>
             <div style={{
-                background: '#111', padding: '40px', borderRadius: '12px',
-                border: '1px solid #333', width: '100%', maxWidth: '400px',
-                boxShadow: '0 0 20px rgba(0,255,255,0.1)'
+                background: '#1e272e', padding: '40px', borderRadius: '12px',
+                border: '1px solid #3b4650', width: '100%', maxWidth: '400px',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.22)'
             }}>
-                <h1 style={{ textAlign: 'center', color: '#00FFFF', marginBottom: '30px' }}>GMAO ACCESO</h1>
+                <h1 style={{ textAlign: 'center', color: '#f39c12', marginBottom: '30px' }}>GMAO ACCESO</h1>
 
-                {error && <div style={{ background: 'rgba(255,0,0,0.2)', color: '#ff4444', padding: '10px', borderRadius: '6px', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
+                {error && <div style={{ background: 'rgba(192,57,43,0.18)', color: '#f1948a', padding: '10px', borderRadius: '6px', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
 
                 <form onSubmit={handleLogin}>
                     <div style={{ marginBottom: '20px' }}>
@@ -54,7 +54,7 @@ export default function Login({ setContext }) {
                             type="text"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
-                            style={{ width: '100%', padding: '12px', background: '#000', border: '1px solid #333', color: 'white', borderRadius: '6px', fontSize: '1.1rem', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '12px', background: '#2c3e50', border: '1px solid #435364', color: 'white', borderRadius: '6px', fontSize: '1.1rem', boxSizing: 'border-box' }}
                         />
                     </div>
 
@@ -64,17 +64,17 @@ export default function Login({ setContext }) {
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
-                            style={{ width: '100%', padding: '12px', background: '#000', border: '1px solid #333', color: 'white', borderRadius: '6px', fontSize: '1.1rem', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '12px', background: '#2c3e50', border: '1px solid #435364', color: 'white', borderRadius: '6px', fontSize: '1.1rem', boxSizing: 'border-box' }}
                         />
                     </div>
 
                     <button
                         type="submit"
                         style={{
-                            width: '100%', padding: '15px', background: 'rgba(0, 255, 255, 0.1)',
-                            border: '2px solid #00FFFF', color: '#00FFFF', borderRadius: '6px',
+                            width: '100%', padding: '15px', background: '#2980b9',
+                            border: '2px solid #2471a3', color: 'white', borderRadius: '6px',
                             fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer',
-                            boxShadow: '0 0 10px rgba(0,255,255,0.2)'
+                            boxShadow: '0 6px 16px rgba(0,0,0,0.22)'
                         }}
                     >
                         ENTRAR
