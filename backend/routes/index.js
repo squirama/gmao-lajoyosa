@@ -4,6 +4,7 @@ const AlertController = require('../controllers/AlertController');
 const UserController = require('../controllers/UserController');
 const LogController = require('../controllers/LogController');
 const ConfigController = require('../controllers/ConfigController');
+const HistoryController = require('../controllers/HistoryController');
 
 async function routes(fastify, options) {
 
@@ -59,6 +60,7 @@ async function routes(fastify, options) {
     const RequestController = require('../controllers/RequestController');
     fastify.post('/requests', RequestController.createRequest);
     fastify.get('/admin/requests', RequestController.getAllRequests);
+    fastify.get('/admin/history', HistoryController.getMaintenanceHistory);
 
     // --- Maintenance Plans ---
     fastify.post('/admin/plans', PlanController.createPlan);

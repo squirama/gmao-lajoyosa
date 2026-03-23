@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminAssetsSection from './components/admin/AdminAssetsSection';
+import AdminHistorySection from './components/admin/AdminHistorySection';
 import AdminPlansSection from './components/admin/AdminPlansSection';
 import AdminReportsSection from './components/admin/AdminReportsSection';
 
@@ -148,5 +149,58 @@ describe('Admin sections', () => {
         expect(downloadReport).toHaveBeenNthCalledWith(1, 'history');
         expect(downloadReport).toHaveBeenNthCalledWith(2, 'interventions');
         expect(downloadReport).toHaveBeenNthCalledWith(3, 'requests');
+    });
+
+    it('history muestra adjuntos y aplica filtros', async () => {
+        const onApplyFilters = vi.fn();
+        const setHistoryFilters = vi.fn();
+
+        render(
+            <AdminHistorySection
+                assets={[{ id: 3, name: 'Encajadora', dept_id: 8 }]}
+                departments={[{ id: 8, name: 'Produccion', location_id: 2 }]}
+                historyError=""
+                historyFilters={{
+                    start: '2026-03-01',
+                    end: '2026-03-31',
+                    location_id: '',
+                    department_id: '',
+                    asset_id: '',
+                    with_documents: true,
+                }}
+                historyLoading={false}
+                historyRows={[{
+                    id: 77,
+                    asset_name: 'Encajadora',
+                    task_description: 'Revision de cadena',
+                    location_name: 'Sede Central',
+                    department_name: 'Produccion',
+                    operator_name: 'Laura',
+                    notes: 'Se adjunta parte externo',
+                    document_path: '["/documents/parte-1.pdf","/documents/foto-1.jpg"]',
+                    created_at: '2026-03-18T08:30:00.000Z',
+                    entry_type: 'corrective',
+                    duration_minutes: 45,
+                    solution: 'Cambio de rodamiento',
+                }]}
+                locations={[{ id: 2, name: 'Sede Central' }]}
+                onApplyFilters={onApplyFilters}
+                setHistoryFilters={setHistoryFilters}
+            />
+        );
+
+        expect(screen.getByText(/historial de mantenimientos/i)).toBeInTheDocument();
+        expect(screen.getAllByText('Encajadora').length).toBeGreaterThan(0);
+        expect(screen.getByText('Correctivo')).toBeInTheDocument();
+        expect(screen.getByText(/cambio de rodamiento/i)).toBeInTheDocument();
+        expect(screen.getByText(/2 adjunto/i)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Ver archivo 1' })).toHaveAttribute('href', '/documents/parte-1.pdf');
+
+        const selects = screen.getAllByRole('combobox');
+        await userEvent.selectOptions(selects[0], '2');
+        expect(setHistoryFilters).toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: /aplicar filtros/i }));
+        expect(onApplyFilters).toHaveBeenCalledWith(expect.objectContaining({ with_documents: true }));
     });
 });

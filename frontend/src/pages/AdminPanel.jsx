@@ -7,6 +7,7 @@ import AdminAssetCalendarModal from '../components/admin/AdminAssetCalendarModal
 import AdminAssetsSection from '../components/admin/AdminAssetsSection';
 import AdminDepartmentsSection from '../components/admin/AdminDepartmentsSection';
 import AdminErrorBoundary from '../components/admin/AdminErrorBoundary';
+import AdminHistorySection from '../components/admin/AdminHistorySection';
 import AdminLegalSection from '../components/admin/AdminLegalSection';
 import AdminLocationsSection from '../components/admin/AdminLocationsSection';
 import AdminPlansSection from '../components/admin/AdminPlansSection';
@@ -20,6 +21,7 @@ import { useAdminPlans } from '../hooks/useAdminPlans';
 import { usePlanHistory } from '../hooks/usePlanHistory';
 import { useAdminReports } from '../hooks/useAdminReports';
 import { useAdminUsers } from '../hooks/useAdminUsers';
+import { useAdminHistory } from '../hooks/useAdminHistory';
 import { toLocalDateInputValue } from '../utils/adminPanelUtils';
 
 const AdminScheduler = lazy(() => import('../pages/AdminScheduler'));
@@ -32,6 +34,7 @@ const ADMIN_SECTIONS = [
     'assets',
     'plans',
     'inventory',
+    'history',
     'legal',
     'users',
     'reports',
@@ -44,6 +47,7 @@ const ADMIN_SECTION_LABELS = {
     assets: 'Maquinas',
     plans: 'Planes',
     inventory: 'Inventario',
+    history: 'Historial',
     legal: 'Normativa',
     users: 'Operarios',
     reports: 'Informes',
@@ -120,6 +124,14 @@ export default function AdminPanel() {
         setReportEndDate,
         setReportStartDate,
     } = useAdminReports(authHeader);
+    const {
+        fetchHistory: fetchMaintenanceHistory,
+        historyError,
+        historyFilters,
+        historyLoading,
+        historyRows,
+        setHistoryFilters,
+    } = useAdminHistory(authHeader);
 
     const [loading, setLoading] = useState(false);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -266,6 +278,7 @@ export default function AdminPanel() {
                     <button onClick={() => goToAdminSection('assets')} className={`sidebar-btn ${activeTab === 'assets' ? 'active' : ''}`}>Maquinas</button>
                     <button onClick={() => goToAdminSection('plans')} className={`sidebar-btn ${activeTab === 'plans' ? 'active' : ''}`}>Planes</button>
                     <button onClick={() => goToAdminSection('inventory')} className={`sidebar-btn ${activeTab === 'inventory' ? 'active' : ''}`}>Inventario</button>
+                    <button onClick={() => goToAdminSection('history')} className={`sidebar-btn ${activeTab === 'history' ? 'active' : ''}`}>Historial</button>
                     <button onClick={() => goToAdminSection('legal')} className={`sidebar-btn ${activeTab === 'legal' ? 'active' : ''}`} style={{ color: 'var(--neon-orange)' }}>Normativa</button>
                     <button onClick={() => goToAdminSection('users')} className={`sidebar-btn ${activeTab === 'users' ? 'active' : ''}`}>Operarios</button>
                     <button onClick={() => goToAdminSection('reports')} className={`sidebar-btn ${activeTab === 'reports' ? 'active' : ''}`}>Informes</button>
@@ -418,7 +431,22 @@ export default function AdminPanel() {
                         )
                     }
 
-                    {/* I. INVENTARIO (REPUESTOS) */}
+                    {/* I. HISTORIAL */}
+                    {activeTab === 'history' && (
+                        <AdminHistorySection
+                            assets={config.assets || []}
+                            departments={config.departments || []}
+                            historyError={historyError}
+                            historyFilters={historyFilters}
+                            historyLoading={historyLoading}
+                            historyRows={historyRows}
+                            locations={config.locations || []}
+                            onApplyFilters={fetchMaintenanceHistory}
+                            setHistoryFilters={setHistoryFilters}
+                        />
+                    )}
+
+                    {/* J. INVENTARIO (REPUESTOS) */}
                     {activeTab === 'inventory' && (
                         renderLazySection(
                             <div className="center-panel" style={{ padding: 0 }}>

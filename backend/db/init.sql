@@ -120,7 +120,8 @@ CREATE TABLE intervention_logs (
     created_at TIMESTAMP DEFAULT NOW(),
     global_comment TEXT,
     duration_minutes INTEGER DEFAULT 0,
-    solution TEXT
+    solution TEXT,
+    document_path TEXT
 );
 
 CREATE TABLE intervention_tasks (

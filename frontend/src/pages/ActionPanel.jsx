@@ -136,6 +136,7 @@ export default function ActionPanel({ context }) {
                 global_comment: globalComment,
                 duration_minutes: parseInt(duration),
                 solution: solution,
+                document_path: documentPath,
                 tasks: validTasks,
                 consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty }))
             };
@@ -148,6 +149,7 @@ export default function ActionPanel({ context }) {
                     global_comment: globalComment,
                     duration_minutes: parseInt(duration), // Send duration for general breakdown too
                     solution: solution, // <--- ADDED THIS LINE
+                    document_path: documentPath,
                     tasks: [{
                         description: "AVERÍA GENERAL / MANTENIMIENTO CORRECTIVO",
                         checked: true,

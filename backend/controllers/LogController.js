@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 const { processPartConsumptions } = require('../utils/inventory_helper');
 
 exports.createLog = async (req, reply) => {
-    const { asset_id, user_id, global_comment, tasks, solution, consumed_parts } = req.body;
+    const { asset_id, user_id, global_comment, tasks, solution, consumed_parts, document_path } = req.body;
     const client = await db.connect();
 
     try {
@@ -11,8 +11,8 @@ exports.createLog = async (req, reply) => {
 
         // A. Insert Log Header
         const logRes = await client.query(
-            `INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-            [asset_id, user_id, global_comment, req.body.duration_minutes || 0, solution || null]
+            `INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution, document_path) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+            [asset_id, user_id, global_comment, req.body.duration_minutes || 0, solution || null, document_path || null]
         );
         const logId = logRes.rows[0].id;
 
@@ -55,7 +55,7 @@ exports.createLog = async (req, reply) => {
         await client.query('COMMIT');
 
         // C. Email Notification
-        const notifyEmail = process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+        const notifyEmail = process.env.NOTIFICATION_EMAIL || 'mantenimiento@bodegascare.com';
 
         if (alertTasks.length > 0) {
             // Fetch Operator Name
@@ -72,7 +72,7 @@ exports.createLog = async (req, reply) => {
                 WHERE a.id = $1
             `, [asset_id]);
 
-            let targetEmail = process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+            let targetEmail = process.env.NOTIFICATION_EMAIL || 'mantenimiento@bodegascare.com'; // Global Fallback
 
             if (emailRes.rows.length > 0) {
                 const { dept_email, loc_email } = emailRes.rows[0];
@@ -84,18 +84,18 @@ exports.createLog = async (req, reply) => {
 
             // Re-use robust transporter config
             const transporter = nodemailer.createTransport({
-                host: process.env.SMTP_HOST || 'smtp.example.com',
+                host: process.env.SMTP_HOST || 'smtp.dondominio.com',
                 port: process.env.SMTP_PORT || 465,
                 secure: true,
                 auth: {
-                    user: process.env.SMTP_USER || 'alerts@example.com',
+                    user: process.env.SMTP_USER || 'mantenimiento@bodegascare.com',
                     pass: process.env.SMTP_PASS
                 }
             });
 
             try {
                 await transporter.sendMail({
-                    from: '"GMAO Alert" <' + (process.env.SMTP_USER || 'alerts@example.com') + '>',
+                    from: '"GMAO Alert" <' + (process.env.SMTP_USER || 'mantenimiento@bodegascare.com') + '>',
                     to: targetEmail,
                     subject: `🚨 ALERTA - Activo #${asset_id}`,
                     html: `

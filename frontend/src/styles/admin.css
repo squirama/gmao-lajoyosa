@@ -484,6 +484,136 @@ select:focus {
     min-width: 0;
 }
 
+.admin-empty-state {
+    border: 1px dashed #445160;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #c7d0d9;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-history-list {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-history-item {
+    border: 1px solid #3b4650;
+    border-left: 4px solid var(--neon-green);
+    border-radius: 12px;
+    background: #18212b;
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+}
+
+.admin-history-item.is-corrective {
+    border-left-color: var(--neon-red);
+}
+
+.admin-history-item.is-preventive {
+    border-left-color: var(--neon-green);
+}
+
+.admin-history-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.admin-history-badge--preventive {
+    background: rgba(46, 204, 113, 0.14);
+    border: 1px solid rgba(46, 204, 113, 0.35);
+    color: #7dffb0;
+}
+
+.admin-history-badge--corrective {
+    background: rgba(192, 57, 43, 0.14);
+    border: 1px solid rgba(192, 57, 43, 0.35);
+    color: #ffb0a7;
+}
+
+.admin-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.admin-history-title {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.admin-history-subtitle {
+    color: #9fb0bf;
+    margin-top: 4px;
+}
+
+.admin-history-date {
+    color: #f39c12;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.admin-history-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.admin-history-meta span {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: #c7d0d9;
+    font-size: 0.88rem;
+}
+
+.admin-history-notes {
+    color: #eef2f5;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.admin-history-solution {
+    color: #d7e7f3;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(93, 173, 226, 0.08);
+    border: 1px solid rgba(93, 173, 226, 0.14);
+}
+
+.admin-history-docs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.admin-history-doc-btn {
+    width: auto;
+    min-width: 180px;
+    text-decoration: none;
+    padding: 10px 14px;
+    font-size: 0.92rem;
+}
+
+.admin-history-no-docs {
+    color: #9aa6b2;
+    font-style: italic;
+}
+
 @media (max-width: 1366px) {
     .admin-sidebar {
         width: 220px;
@@ -711,6 +841,19 @@ select:focus {
 
     .admin-scheduler-calendar .rbc-show-more {
         font-size: 0.6rem;
+    }
+
+    .admin-history-header {
+        flex-direction: column;
+    }
+
+    .admin-history-date {
+        white-space: normal;
+    }
+
+    .admin-history-doc-btn {
+        width: 100%;
+        min-width: 0;
     }
 
     .list-item {

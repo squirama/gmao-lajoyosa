@@ -1,19 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-
-function parseDocumentPaths(documentPath) {
-    if (!documentPath) return [];
-
-    try {
-        if (documentPath.startsWith('[')) {
-            return JSON.parse(documentPath);
-        }
-    } catch (error) {
-        console.error(error);
-    }
-
-    return [documentPath];
-}
+import { parseDocumentPaths } from '../../utils/documentPaths';
 
 export default function LegalHistoryModal({
     authHeader,
