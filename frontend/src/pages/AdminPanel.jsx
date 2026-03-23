@@ -1,13 +1,11 @@
 ﻿
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/admin.css'; // Ensure styles are loaded
 import AdminAssetCalendarModal from '../components/admin/AdminAssetCalendarModal';
 import AdminAssetsSection from '../components/admin/AdminAssetsSection';
 import AdminDepartmentsSection from '../components/admin/AdminDepartmentsSection';
-import AdminScheduler from '../pages/AdminScheduler';
-import AdminInventory from '../pages/AdminInventory';
 import AdminErrorBoundary from '../components/admin/AdminErrorBoundary';
 import AdminLegalSection from '../components/admin/AdminLegalSection';
 import AdminLocationsSection from '../components/admin/AdminLocationsSection';
@@ -23,6 +21,9 @@ import { usePlanHistory } from '../hooks/usePlanHistory';
 import { useAdminReports } from '../hooks/useAdminReports';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { toLocalDateInputValue } from '../utils/adminPanelUtils';
+
+const AdminScheduler = lazy(() => import('../pages/AdminScheduler'));
+const AdminInventory = lazy(() => import('../pages/AdminInventory'));
 
 const ADMIN_SECTIONS = [
     'planning',
@@ -113,6 +114,21 @@ export default function AdminPanel() {
     // Modal state.
     const [calendarAsset, setCalendarAsset] = useState(null);
     const activeTab = ADMIN_SECTIONS.includes(section) ? section : 'assets';
+
+    const renderLazySection = (node) => (
+        <Suspense
+            fallback={
+                <div className="center-panel">
+                    <div className="card" style={{ maxWidth: 420, textAlign: 'center' }}>
+                        <h2 style={{ marginTop: 0 }}>Cargando seccion...</h2>
+                        <div style={{ color: 'var(--text-muted)' }}>Preparando contenido.</div>
+                    </div>
+                </div>
+            }
+        >
+            {node}
+        </Suspense>
+    );
 
     // Initial load.
     useEffect(() => {
@@ -252,21 +268,23 @@ export default function AdminPanel() {
 
                     {/* A. CALENDARIO */}
                     {activeTab === 'planning' && (
-                        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-                            <h2 className="title">CALENDARIO PREVENTIVO GLOBAL</h2>
-                            {config.plans && Array.isArray(config.plans) ? (
-                                <AdminScheduler
-                                    allPlans={config.plans}
-                                    planExceptions={config.plan_exceptions || []}
-                                    onSelectEvent={handleSchedulerEvent}
-                                    onReschedule={handleDragReschedule}
-                                    authHeader={authHeader}
-                                    refreshAll={refreshAll}
-                                />
-                            ) : (
-                                <div style={{ color: 'red' }}>Error cargando eventos.</div>
-                            )}
-                        </div>
+                        renderLazySection(
+                            <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+                                <h2 className="title">CALENDARIO PREVENTIVO GLOBAL</h2>
+                                {config.plans && Array.isArray(config.plans) ? (
+                                    <AdminScheduler
+                                        allPlans={config.plans}
+                                        planExceptions={config.plan_exceptions || []}
+                                        onSelectEvent={handleSchedulerEvent}
+                                        onReschedule={handleDragReschedule}
+                                        authHeader={authHeader}
+                                        refreshAll={refreshAll}
+                                    />
+                                ) : (
+                                    <div style={{ color: 'red' }}>Error cargando eventos.</div>
+                                )}
+                            </div>
+                        )
                     )}
 
                     {/* B. SEDES (LOCATIONS) */}
@@ -378,9 +396,11 @@ export default function AdminPanel() {
 
                     {/* I. INVENTARIO (REPUESTOS) */}
                     {activeTab === 'inventory' && (
-                        <div className="center-panel" style={{ padding: 0 }}>
-                            <AdminInventory assets={config.assets || []} />
-                        </div>
+                        renderLazySection(
+                            <div className="center-panel" style={{ padding: 0 }}>
+                                <AdminInventory assets={config.assets || []} />
+                            </div>
+                        )
                     )}
 
                     <AdminAssetCalendarModal

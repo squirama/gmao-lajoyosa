@@ -27,39 +27,69 @@ const {
     upsertPlanException,
 } = require('../repositories/planRepository');
 const { processPartConsumptions } = require('../utils/inventory_helper');
+const {
+    ensureBoolean,
+    ensureConsumedParts,
+    ensureDateOnlyString,
+    ensureObject,
+    ensurePositiveInteger,
+    ensureString,
+    sendValidationError,
+} = require('../utils/validation');
 
 // POST /admin/plans
 exports.createPlan = async (request, reply) => {
-    return insertPlan(db, normalizePlanPayload(request.body));
+    try {
+        ensureObject(request.body, 'plan');
+        return insertPlan(db, normalizePlanPayload(request.body));
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 };
 
 // PUT /admin/plans/:id
 exports.updatePlan = async (request, reply) => {
-    const normalizedPlan = normalizePlanPayload(request.body);
-    return updatePlanRecord(db, request.params.id, normalizedPlan);
+    try {
+        const planId = ensurePositiveInteger(request.params.id, 'id');
+        ensureObject(request.body, 'plan');
+        const normalizedPlan = normalizePlanPayload(request.body);
+        return updatePlanRecord(db, planId, normalizedPlan);
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 };
 
 // DELETE /admin/plans/:id
 exports.deletePlan = async (request, reply) => {
-    await deactivatePlan(db, request.params.id);
-    await deletePendingAlertsByPlanId(db, request.params.id);
-    return { success: true };
+    try {
+        const planId = ensurePositiveInteger(request.params.id, 'id');
+        await deactivatePlan(db, planId);
+        await deletePendingAlertsByPlanId(db, planId);
+        return { success: true };
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 };
 
 // PUT /admin/maintenance-plans/:id/reschedule
 exports.reschedulePlan = async (request, reply) => {
-    const { new_date } = request.body;
-    const { id } = request.params;
-
-    if (!new_date) return reply.code(400).send({ error: 'Missing new_date' });
+    let newDate;
+    let id;
+    try {
+        const body = ensureObject(request.body, 'reprogramacion');
+        newDate = ensureDateOnlyString(body.new_date, 'new_date');
+        id = ensurePositiveInteger(request.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 
     const client = await db.connect();
     try {
         await client.query('BEGIN');
-        await updatePlanDueDate(client, id, new_date);
-        await updatePendingAlertsSchedule(client, id, new_date);
+        await updatePlanDueDate(client, id, newDate);
+        await updatePendingAlertsSchedule(client, id, newDate);
         await client.query('COMMIT');
-        return { success: true, new_date };
+        return { success: true, new_date: newDate };
     } catch (error) {
         await client.query('ROLLBACK');
         return reply.code(500).send({ error: error.message });
@@ -70,16 +100,21 @@ exports.reschedulePlan = async (request, reply) => {
 
 // POST /admin/maintenance-plans/:id/exception
 exports.createException = async (request, reply) => {
-    const { id } = request.params;
-    const { original_date, new_date } = request.body;
-
-    if (!original_date || !new_date) {
-        return reply.code(400).send({ error: 'Faltan fechas original_date y new_date' });
+    let id;
+    let originalDate;
+    let newDate;
+    try {
+        const body = ensureObject(request.body, 'exception');
+        id = ensurePositiveInteger(request.params.id, 'id');
+        originalDate = ensureDateOnlyString(body.original_date, 'original_date');
+        newDate = ensureDateOnlyString(body.new_date, 'new_date');
+    } catch (error) {
+        return sendValidationError(reply, error);
     }
 
     try {
-        await upsertPlanException(db, id, original_date, new_date);
-        return { success: true, original_date, new_date };
+        await upsertPlanException(db, id, originalDate, newDate);
+        return { success: true, original_date: originalDate, new_date: newDate };
     } catch (error) {
         console.error('Error creating exception:', error);
         return reply.code(500).send({ error: error.message });
@@ -88,7 +123,12 @@ exports.createException = async (request, reply) => {
 
 // POST /admin/maintenance-plans/:id/skip
 exports.skipPlan = async (request, reply) => {
-    const { id } = request.params;
+    let id;
+    try {
+        id = ensurePositiveInteger(request.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
     const client = await db.connect();
 
     try {
@@ -130,8 +170,24 @@ async function sendPreventiveAlert(plan, operatorId, alertContext) {
 
 // POST /admin/maintenance-plans/:id/complete
 exports.completePlan = async (request, reply) => {
-    const { id } = request.params;
-    const { operator_id, notes, alert, document_path, consumed_parts } = request.body;
+    let id;
+    let operatorId;
+    let notes;
+    let alert;
+    let documentPath;
+    let consumedParts;
+    try {
+        const body = ensureObject(request.body, 'completePlan');
+        id = ensurePositiveInteger(request.params.id, 'id');
+        operatorId = ensurePositiveInteger(body.operator_id, 'operator_id', { required: false });
+        notes = ensureString(body.notes, 'notes', { required: false, allowEmpty: true, maxLength: 4000 });
+        alert = ensureBoolean(body.alert, 'alert', { defaultValue: false });
+        documentPath = ensureString(body.document_path, 'document_path', { required: false, allowEmpty: true, maxLength: 2000 });
+        consumedParts = ensureConsumedParts(body.consumed_parts);
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     const client = await db.connect();
 
     try {
@@ -143,19 +199,19 @@ exports.completePlan = async (request, reply) => {
         const historyId = await insertHistory(client, {
             planId: id,
             assetId: plan.asset_id,
-            operatorId: operator_id || null,
+            operatorId: operatorId || null,
             notes: notes || 'Completado desde App',
-            documentPath: document_path || null,
+            documentPath: documentPath || null,
         });
 
-        if (consumed_parts && consumed_parts.length > 0) {
-            await processPartConsumptions(client, consumed_parts, { history_id: historyId });
+        if (consumedParts.length > 0) {
+            await processPartConsumptions(client, consumedParts, { history_id: historyId });
         }
 
         if (alert) {
             try {
-                const operatorName = operator_id ? await getUserFullName(client, operator_id) : null;
-                await sendPreventiveAlert(plan, operator_id, {
+                const operatorName = operatorId ? await getUserFullName(client, operatorId) : null;
+                await sendPreventiveAlert(plan, operatorId, {
                     operatorName,
                     text: notes || '',
                 });
@@ -181,12 +237,22 @@ exports.completePlan = async (request, reply) => {
 
 // GET /admin/plans/:id/history
 exports.getPlanHistory = async (request, reply) => {
-    return getPlanHistoryByPlanId(db, request.params.id);
+    try {
+        const planId = ensurePositiveInteger(request.params.id, 'id');
+        return getPlanHistoryByPlanId(db, planId);
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 };
 
 // POST /admin/plans/:id/upload
 exports.uploadDocument = async (request, reply) => {
-    const { id } = request.params;
+    let id;
+    try {
+        id = ensurePositiveInteger(request.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
     const parts = request.parts();
     const files = [];
     const documentsPath = process.env.DOCUMENTS_PATH || path.join(__dirname, '..', 'uploads', 'documents');

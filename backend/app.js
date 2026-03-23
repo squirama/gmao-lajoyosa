@@ -4,9 +4,11 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const fs = require('fs');
 const fastifyFactory = require('fastify');
 const nodemailer = require('nodemailer');
+const db = require('./db');
 
 const { resolveAuthContext, sendUnauthorized } = require('./utils/auth');
 const { validateEnv } = require('./utils/env');
+const { ValidationError } = require('./utils/validation');
 
 function ensureDirectory(dirPath) {
     if (!fs.existsSync(dirPath)) {
@@ -16,7 +18,7 @@ function ensureDirectory(dirPath) {
 
 function createMailer() {
     return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.example.com',
+        host: process.env.SMTP_HOST || 'mail.bodegascare.com',
         port: parseInt(process.env.SMTP_PORT || '465', 10),
         secure: process.env.SMTP_SECURE !== 'false',
         auth: {
@@ -59,7 +61,23 @@ async function buildApp(options = {}) {
         decorateReply: false,
     });
 
-    fastify.get('/health', async () => ({ status: 'ok' }));
+    fastify.get('/health', async (request, reply) => {
+        try {
+            await db.query('SELECT 1 AS ok');
+            return {
+                status: 'ok',
+                database: 'ok',
+                uptime_seconds: Math.round(process.uptime()),
+            };
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(503).send({
+                status: 'degraded',
+                database: 'error',
+                uptime_seconds: Math.round(process.uptime()),
+            });
+        }
+    });
 
     fastify.addHook('onRequest', async (request, reply) => {
         const protectedRoute = (
@@ -130,6 +148,26 @@ async function buildApp(options = {}) {
         console.error("ERROR FATAL: No se encuentra './routes/index.js'");
         throw error;
     }
+
+    fastify.setErrorHandler(async (error, request, reply) => {
+        if (reply.sent) {
+            return;
+        }
+
+        if (error instanceof ValidationError) {
+            request.log.warn({ error: error.message, details: error.details }, 'Validation failed');
+            return reply.code(400).send({
+                error: error.message,
+                ...(error.details ? { details: error.details } : {}),
+            });
+        }
+
+        request.log.error(error);
+        const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+        return reply.code(statusCode).send({
+            error: statusCode >= 500 ? 'Error en el servidor' : error.message,
+        });
+    });
 
     fastify.setNotFoundHandler(async (request, reply) => {
         if (request.url.startsWith('/api')) {

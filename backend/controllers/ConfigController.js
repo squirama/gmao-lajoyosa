@@ -13,6 +13,13 @@ const {
     fetchPlans,
     fetchStats,
 } = require('../repositories/configRepository');
+const {
+    ensureEmail,
+    ensureObject,
+    ensurePositiveInteger,
+    ensureString,
+    sendValidationError,
+} = require('../utils/validation');
 
 async function withScopedAccess(reply, authorizationHeader, handler) {
     const client = await db.connect();
@@ -76,11 +83,22 @@ exports.getConfig = async (req, reply) => {
 };
 
 exports.createDepartment = async (req, reply) => {
-    const { location_id, name, email } = req.body;
+    let locationId;
+    let name;
+    let email;
+    try {
+        const body = ensureObject(req.body, 'department');
+        locationId = ensurePositiveInteger(body.location_id, 'location_id');
+        name = ensureString(body.name, 'name', { maxLength: 160 });
+        email = ensureEmail(body.email, 'email', { required: false });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         const res = await db.query(
             'INSERT INTO departments (location_id, name, email) VALUES ($1, $2, $3) RETURNING *',
-            [location_id, name, email || null]
+            [locationId, name, email || null]
         );
         return res.rows[0];
     } catch (error) {
@@ -92,12 +110,24 @@ exports.createDepartment = async (req, reply) => {
 };
 
 exports.updateDepartment = async (req, reply) => {
-    const { id } = req.params;
-    const { name, location_id, email } = req.body;
+    let id;
+    let name;
+    let locationId;
+    let email;
+    try {
+        const body = ensureObject(req.body, 'department');
+        id = ensurePositiveInteger(req.params.id, 'id');
+        name = ensureString(body.name, 'name', { maxLength: 160 });
+        locationId = ensurePositiveInteger(body.location_id, 'location_id');
+        email = ensureEmail(body.email, 'email', { required: false });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         const res = await db.query(
             'UPDATE departments SET name = $1, location_id = $2, email = $3 WHERE id = $4 RETURNING *',
-            [name, location_id, email || null, id]
+            [name, locationId, email || null, id]
         );
         return res.rows[0];
     } catch (error) {
@@ -109,7 +139,13 @@ exports.updateDepartment = async (req, reply) => {
 };
 
 exports.deleteDepartment = async (req, reply) => {
-    const { id } = req.params;
+    let id;
+    try {
+        id = ensurePositiveInteger(req.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         await db.query('DELETE FROM departments WHERE id = $1', [id]);
         return { success: true };
@@ -122,7 +158,18 @@ exports.deleteDepartment = async (req, reply) => {
 };
 
 exports.createLocation = async (req, reply) => {
-    const { name, address, email } = req.body;
+    let name;
+    let address;
+    let email;
+    try {
+        const body = ensureObject(req.body, 'location');
+        name = ensureString(body.name, 'name', { maxLength: 160 });
+        address = ensureString(body.address, 'address', { required: false, allowEmpty: true, maxLength: 255 });
+        email = ensureEmail(body.email, 'email', { required: false });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         const res = await db.query(
             'INSERT INTO locations (name, address, email) VALUES ($1, $2, $3) RETURNING *',
@@ -138,8 +185,20 @@ exports.createLocation = async (req, reply) => {
 };
 
 exports.updateLocation = async (req, reply) => {
-    const { id } = req.params;
-    const { name, address, email } = req.body;
+    let id;
+    let name;
+    let address;
+    let email;
+    try {
+        const body = ensureObject(req.body, 'location');
+        id = ensurePositiveInteger(req.params.id, 'id');
+        name = ensureString(body.name, 'name', { maxLength: 160 });
+        address = ensureString(body.address, 'address', { required: false, allowEmpty: true, maxLength: 255 });
+        email = ensureEmail(body.email, 'email', { required: false });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         const res = await db.query(
             'UPDATE locations SET name = $1, address = $2, email = $3 WHERE id = $4 RETURNING *',
@@ -155,7 +214,13 @@ exports.updateLocation = async (req, reply) => {
 };
 
 exports.deleteLocation = async (req, reply) => {
-    const { id } = req.params;
+    let id;
+    try {
+        id = ensurePositiveInteger(req.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         await db.query('DELETE FROM locations WHERE id = $1', [id]);
         return { success: true };

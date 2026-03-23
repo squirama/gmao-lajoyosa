@@ -1,5 +1,15 @@
 const db = require('../db');
 const { hashPassword } = require('../utils/passwords');
+const {
+    ensureEnum,
+    ensureIntegerArray,
+    ensureObject,
+    ensurePositiveInteger,
+    ensureString,
+    sendValidationError,
+} = require('../utils/validation');
+
+const ALLOWED_ROLES = ['SUPER_ADMIN', 'ADMIN', 'admin', 'OPERATOR', 'operator'];
 
 exports.getUsers = async (req, reply) => {
     const client = await db.connect();
@@ -37,28 +47,38 @@ exports.getAllUsers = async (req, reply) => {
 };
 
 exports.createUser = async (req, reply) => {
-    const { full_name, role, username, password, department_ids } = req.body;
+    let fullName;
+    let role;
+    let username;
+    let passwordHash = null;
+    let departmentIds;
+    try {
+        const body = ensureObject(req.body, 'user');
+        fullName = ensureString(body.full_name, 'full_name', { maxLength: 160 });
+        role = ensureEnum(body.role, 'role', ALLOWED_ROLES, { required: false, defaultValue: 'OPERATOR' });
+        username = ensureString(body.username, 'username', { maxLength: 80, pattern: /^[A-Za-z0-9._-]+$/ });
+        const password = ensureString(body.password, 'password', { required: false, allowEmpty: true, minLength: 6, maxLength: 200 });
+        passwordHash = password ? hashPassword(password) : null;
+        departmentIds = ensureIntegerArray(body.department_ids, 'department_ids');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     const client = await db.connect();
 
     try {
         await client.query('BEGIN');
-
-        let password_hash = null;
-        if (password) password_hash = hashPassword(password);
-
         const res = await client.query(
             "INSERT INTO users (full_name, role, username, password_hash) VALUES ($1, $2, $3, $4) RETURNING *",
-            [full_name, role || 'operator', username, password_hash]
+            [fullName, role, username, passwordHash]
         );
         const user = res.rows[0];
 
-        if (department_ids && Array.isArray(department_ids)) {
-            for (const deptId of department_ids) {
-                await client.query(
-                    "INSERT INTO user_departments (user_id, department_id) VALUES ($1, $2)",
-                    [user.id, deptId]
-                );
-            }
+        for (const deptId of departmentIds) {
+            await client.query(
+                "INSERT INTO user_departments (user_id, department_id) VALUES ($1, $2)",
+                [user.id, deptId]
+            );
         }
 
         await client.query('COMMIT');
@@ -73,20 +93,37 @@ exports.createUser = async (req, reply) => {
 };
 
 exports.updateUser = async (req, reply) => {
-    const { id } = req.params;
-    const { full_name, role, username, password, department_ids } = req.body;
+    let id;
+    let fullName;
+    let role;
+    let username;
+    let passwordHash = null;
+    let departmentIds;
+    try {
+        const body = ensureObject(req.body, 'user');
+        id = ensurePositiveInteger(req.params.id, 'id');
+        fullName = ensureString(body.full_name, 'full_name', { maxLength: 160 });
+        role = ensureEnum(body.role, 'role', ALLOWED_ROLES);
+        username = ensureString(body.username, 'username', { maxLength: 80, pattern: /^[A-Za-z0-9._-]+$/ });
+        const password = ensureString(body.password, 'password', { required: false, allowEmpty: true, minLength: 6, maxLength: 200 });
+        passwordHash = password ? hashPassword(password) : null;
+        departmentIds = ensureIntegerArray(body.department_ids, 'department_ids');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     const client = await db.connect();
 
     try {
         await client.query('BEGIN');
 
         let query = "UPDATE users SET full_name = $1, role = $2, username = $3";
-        const params = [full_name, role, username];
+        const params = [fullName, role, username];
         let idx = 4;
 
-        if (password) {
+        if (passwordHash) {
             query += `, password_hash = $${idx}`;
-            params.push(hashPassword(password));
+            params.push(passwordHash);
             idx++;
         }
 
@@ -96,14 +133,12 @@ exports.updateUser = async (req, reply) => {
         const res = await client.query(query, params);
         const user = res.rows[0];
 
-        if (department_ids && Array.isArray(department_ids)) {
-            await client.query("DELETE FROM user_departments WHERE user_id = $1", [id]);
-            for (const deptId of department_ids) {
-                await client.query(
-                    "INSERT INTO user_departments (user_id, department_id) VALUES ($1, $2)",
-                    [id, deptId]
-                );
-            }
+        await client.query("DELETE FROM user_departments WHERE user_id = $1", [id]);
+        for (const deptId of departmentIds) {
+            await client.query(
+                "INSERT INTO user_departments (user_id, department_id) VALUES ($1, $2)",
+                [id, deptId]
+            );
         }
 
         await client.query('COMMIT');
@@ -118,6 +153,11 @@ exports.updateUser = async (req, reply) => {
 };
 
 exports.deleteUser = async (req, reply) => {
-    const res = await db.query("UPDATE users SET active = false WHERE id = $1 RETURNING *", [req.params.id]);
-    return res.rows[0];
+    try {
+        const userId = ensurePositiveInteger(req.params.id, 'id');
+        const res = await db.query("UPDATE users SET active = false WHERE id = $1 RETURNING *", [userId]);
+        return res.rows[0];
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
 };

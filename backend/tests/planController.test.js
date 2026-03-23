@@ -20,7 +20,7 @@ test('reschedulePlan devuelve 400 si falta new_date', async () => {
     }, reply);
 
     assert.equal(reply.getStatusCode(), 400);
-    assert.deepEqual(result, { error: 'Missing new_date' });
+    assert.deepEqual(result, { error: 'new_date es obligatorio' });
 });
 
 test('skipPlan avanza la fecha y limpia alertas pendientes', async () => {
@@ -104,7 +104,7 @@ test('completePlan registra historial, actualiza siguiente fecha y limpia estado
 
         if (sql.startsWith('INSERT INTO maintenance_history ( plan_id, asset_id, operator_id, performed_date, notes, document_path ) VALUES')) {
             historyInserted = true;
-            assert.equal(params[0], '9');
+            assert.equal(params[0], 9);
             assert.equal(params[1], 4);
             assert.equal(params[2], 22);
             assert.equal(params[3], 'OK');
@@ -114,7 +114,7 @@ test('completePlan registra historial, actualiza siguiente fecha y limpia estado
 
         if (sql === 'UPDATE maintenance_plans SET next_due_date = $1, last_performed = CURRENT_DATE WHERE id = $2') {
             completedPlanDate = params[0];
-            assert.equal(params[1], '9');
+            assert.equal(params[1], 9);
             return { rows: [] };
         }
 
@@ -125,7 +125,7 @@ test('completePlan registra historial, actualiza siguiente fecha y limpia estado
 
         if (sql === 'DELETE FROM plan_exceptions WHERE plan_id = $1 AND original_date <= $2') {
             deletedExceptions = true;
-            assert.equal(params[0], '9');
+            assert.equal(params[0], 9);
             assert.equal(String(params[1]).slice(0, 10), '2026-03-10');
             return { rows: [] };
         }

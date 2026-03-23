@@ -2,12 +2,17 @@ const db = require('../db');
 const crypto = require('crypto');
 const { hashPassword, verifyPassword } = require('../utils/passwords');
 const { getBearerToken } = require('../utils/auth');
+const { ensureObject, ensureString, sendValidationError } = require('../utils/validation');
 
 exports.login = async (req, reply) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return reply.code(400).send({ error: 'Usuario y contrasena requeridos' });
+    let username;
+    let password;
+    try {
+        const body = ensureObject(req.body, 'credenciales');
+        username = ensureString(body.username, 'username', { maxLength: 80 });
+        password = ensureString(body.password, 'password', { maxLength: 200 });
+    } catch (error) {
+        return sendValidationError(reply, error);
     }
 
     try {
@@ -55,7 +60,14 @@ exports.login = async (req, reply) => {
 };
 
 exports.logout = async (req, reply) => {
-    const { token } = req.body;
+    let token = null;
+    try {
+        const body = ensureObject(req.body, 'logout');
+        token = ensureString(body.token, 'token', { required: false, maxLength: 255 });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     if (token) {
         await db.query("UPDATE users SET session_token = NULL WHERE session_token = $1", [token]);
     }

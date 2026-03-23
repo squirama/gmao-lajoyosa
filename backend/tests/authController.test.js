@@ -12,7 +12,7 @@ test('login devuelve 400 si faltan credenciales', async () => {
     const result = await AuthController.login({ body: { username: '', password: '' } }, reply);
 
     assert.equal(reply.getStatusCode(), 400);
-    assert.deepEqual(result, { error: 'Usuario y contrasena requeridos' });
+    assert.deepEqual(result, { error: 'username no puede estar vacio' });
 });
 
 test('login valida password scrypt y actualiza session_token', async () => {

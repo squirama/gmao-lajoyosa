@@ -1,37 +1,55 @@
 const db = require('../db');
 const nodemailer = require('nodemailer');
+const {
+    ensureEnum,
+    ensureObject,
+    ensureString,
+    sendValidationError,
+} = require('../utils/validation');
 
-// Configure Transporter (Reuse this or import from a shared module if available)
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.example.com',
+    host: process.env.SMTP_HOST || 'smtp.dondominio.com',
     port: process.env.SMTP_PORT || 465,
-    secure: true, // true for 465, false for other ports
+    secure: true,
     auth: {
-        user: process.env.SMTP_USER || 'alerts@example.com',
-        pass: process.env.SMTP_PASS
-    }
+        user: process.env.SMTP_USER || 'mantenimiento@bodegascare.com',
+        pass: process.env.SMTP_PASS,
+    },
 });
 
 exports.createRequest = async (req, reply) => {
-    const { operator_name, reason, urgency } = req.body;
+    let operatorName;
+    let reason;
+    let urgency;
+
+    try {
+        const body = ensureObject(req.body, 'request');
+        operatorName = ensureString(body.operator_name, 'operator_name', { maxLength: 120 });
+        reason = ensureString(body.reason, 'reason', { maxLength: 2000 });
+        urgency = ensureEnum(body.urgency, 'urgency', ['Baja', 'Media', 'Alta'], {
+            required: false,
+            defaultValue: 'Baja',
+        });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
     try {
         const res = await db.query(
-            "INSERT INTO maintenance_requests (operator_name, reason, urgency) VALUES ($1, $2, $3) RETURNING *",
-            [operator_name, reason, urgency]
+            'INSERT INTO maintenance_requests (operator_name, reason, urgency) VALUES ($1, $2, $3) RETURNING *',
+            [operatorName, reason, urgency]
         );
 
-        // Send Email
         try {
             await transporter.sendMail({
-                from: '"GMAO System" <' + (process.env.SMTP_USER || 'alerts@example.com') + '>',
-                to: process.env.REQUEST_NOTIFICATION_EMAIL || process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER,
-                subject: `🚨 SOLICITUD MANTENIMIENTO: ${urgency.toUpperCase()}`,
-                text: `Operario: ${operator_name}\nMotivo: ${reason}\nUrgencia: ${urgency}\n\nRevisar Panel de Administración.`
+                from: `"GMAO System" <${process.env.SMTP_USER || 'mantenimiento@bodegascare.com'}>`,
+                to: 'mantenimiento@bodegascare.com',
+                subject: `Solicitud mantenimiento: ${urgency.toUpperCase()}`,
+                text: `Operario: ${operatorName}\nMotivo: ${reason}\nUrgencia: ${urgency}\n\nRevisar panel de administracion.`,
             });
-            console.log('✅ Email sent for request.');
+            console.log('Request email sent.');
         } catch (emailErr) {
-            console.error('❌ Email failed:', emailErr);
-            // Don't fail the request if email fails, just log it.
+            console.error('Request email failed:', emailErr);
         }
 
         return res.rows[0];
@@ -40,7 +58,7 @@ exports.createRequest = async (req, reply) => {
     }
 };
 
-exports.getAllRequests = async (req, reply) => {
-    const res = await db.query("SELECT * FROM maintenance_requests ORDER BY created_at DESC");
+exports.getAllRequests = async () => {
+    const res = await db.query('SELECT * FROM maintenance_requests ORDER BY created_at DESC');
     return res.rows;
 };

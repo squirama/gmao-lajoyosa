@@ -1,3 +1,12 @@
+const {
+    ensureBoolean,
+    ensureDateOnlyString,
+    ensureEmail,
+    ensureNonNegativeInteger,
+    ensurePositiveInteger,
+    ensureString,
+} = require('../utils/validation');
+
 function calculateNextPlanDate(plan) {
     if (!plan.frequency_days || plan.frequency_days <= 0) {
         return null;
@@ -57,19 +66,26 @@ function calculateSkippedPlanDate(plan) {
 }
 
 function normalizePlanPayload(body) {
-    const initialDate = body.start_date ? new Date(body.start_date) : new Date();
-    const isNonRecurring = !body.frequency_days || body.frequency_days <= 0;
+    const assetId = ensurePositiveInteger(body.asset_id, 'asset_id');
+    const taskDescription = ensureString(body.task_description, 'task_description', { maxLength: 255 });
+    const frequencyDays = ensureNonNegativeInteger(body.frequency_days, 'frequency_days', {
+        required: false,
+        defaultValue: 0,
+    });
+    const startDateValue = ensureDateOnlyString(body.start_date, 'start_date', { required: false });
+    const initialDate = startDateValue ? new Date(`${startDateValue}T00:00:00Z`) : new Date();
+    const isNonRecurring = !frequencyDays || frequencyDays <= 0;
 
     return {
-        assetId: body.asset_id,
-        taskDescription: body.task_description,
-        frequencyDays: isNonRecurring ? 0 : body.frequency_days,
-        notifyExternal: body.notify_external || false,
+        assetId,
+        taskDescription,
+        frequencyDays: isNonRecurring ? 0 : frequencyDays,
+        notifyExternal: ensureBoolean(body.notify_external, 'notify_external', { defaultValue: false }),
         nextDueDate: isNonRecurring ? null : initialDate,
         startDate: initialDate,
-        notificationEmail: body.notification_email || null,
-        isLegal: body.is_legal || false,
-        forceDow: body.force_dow || false,
+        notificationEmail: ensureEmail(body.notification_email, 'notification_email', { required: false }),
+        isLegal: ensureBoolean(body.is_legal, 'is_legal', { defaultValue: false }),
+        forceDow: ensureBoolean(body.force_dow, 'force_dow', { defaultValue: false }),
     };
 }
 

@@ -30,6 +30,21 @@ export default defineConfig({
     },
     build: {
         outDir: '../backend/dist',
-        emptyOutDir: true
+        emptyOutDir: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ['react', 'react-dom', 'react-router-dom'],
+                    calendar: ['@fullcalendar/core', '@fullcalendar/daygrid', '@fullcalendar/react', 'react-big-calendar'],
+                    dnd: ['react-dnd', 'react-dnd-html5-backend'],
+                    vendor: ['axios', 'date-fns'],
+                }
+            }
+        }
+    },
+    test: {
+        environment: 'jsdom',
+        globals: true,
+        setupFiles: './src/test/setup.js',
     }
 })
