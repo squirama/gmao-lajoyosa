@@ -86,6 +86,10 @@ async function routes(fastify, options) {
     fastify.get('/inventory', InventoryController.getAllStock);
     fastify.get('/inventory/:id', InventoryController.getStockItem);
     fastify.post('/admin/inventory', InventoryController.createStockItem);
+    fastify.get('/admin/inventory/distribution', InventoryController.getStockDistribution);
+    fastify.get('/admin/inventory/movements', InventoryController.getStockMovements);
+    fastify.post('/admin/inventory/distribution', InventoryController.upsertStockDistribution);
+    fastify.post('/admin/inventory/movements', InventoryController.createStockMovement);
     fastify.put('/admin/inventory/:id', InventoryController.updateStockItem);
     fastify.delete('/admin/inventory/:id', InventoryController.deleteStockItem);
 

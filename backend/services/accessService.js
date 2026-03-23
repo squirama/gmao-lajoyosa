@@ -10,7 +10,7 @@ async function getScopedAccess(client, authHeader) {
     const isSuperAdmin = auth.authType === 'basic' || user?.role === 'SUPER_ADMIN';
     const isAdmin = user ? ['ADMIN', 'admin'].includes(user.role) : false;
 
-    if (user && !isSuperAdmin && !isAdmin) {
+    if (user && !isSuperAdmin) {
         const deptRes = await client.query(
             "SELECT department_id FROM user_departments WHERE user_id = $1",
             [user.id]

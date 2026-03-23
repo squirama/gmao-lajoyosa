@@ -1,4 +1,5 @@
 const { sendEmail } = require('../services/emailService');
+const { deductConsumedStock, resolveAssetLocationId } = require('../services/inventoryService');
 
 /**
  * Deducts stock and logs consumption for a given history/intervention record.
@@ -14,6 +15,7 @@ async function processPartConsumptions(client, consumedParts, references) {
 
     const { history_id, intervention_id } = references;
     const lowStockAlerts = [];
+    const preferredLocationId = await resolveAssetLocationId(client, references);
 
     for (const part of consumedParts) {
         const qty = parseInt(part.quantity, 10);
@@ -26,12 +28,11 @@ async function processPartConsumptions(client, consumedParts, references) {
         if (partRes.rows.length === 0) continue;
 
         const partData = partRes.rows[0];
-        const newStock = partData.stock_current - qty;
-
-        await client.query(
-            'UPDATE spare_parts SET stock_current = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-            [newStock, part.spare_part_id]
-        );
+        const newStock = await deductConsumedStock(client, {
+            sparePartId: part.spare_part_id,
+            quantity: qty,
+            preferredLocationId,
+        });
 
         await client.query(
             `INSERT INTO part_consumptions (history_id, intervention_id, spare_part_id, quantity, unit_cost_at_time)
@@ -53,7 +54,7 @@ async function processPartConsumptions(client, consumedParts, references) {
 }
 
 async function sendLowStockEmails(alerts) {
-    const notifyEmail = process.env.INVENTORY_ALERT_EMAIL || process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+    const notifyEmail = process.env.INVENTORY_ALERT_EMAIL || process.env.NOTIFICATION_EMAIL || 'mantenimiento@bodegascare.com';
 
     for (const alert of alerts) {
         try {

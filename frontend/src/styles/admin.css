@@ -375,6 +375,54 @@ select:focus {
     gap: 12px;
 }
 
+.admin-subtabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 20px;
+}
+
+.admin-subtab {
+    background: #2b3742;
+    color: var(--text-main);
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid #435364;
+    text-transform: none;
+}
+
+.admin-subtab.is-active {
+    background: var(--neon-cyan);
+    color: #0c1116;
+    border-color: transparent;
+}
+
+.admin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    width: 100%;
+    margin-bottom: 18px;
+}
+
+.admin-summary-card {
+    text-align: center;
+}
+
+.admin-summary-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.admin-summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    margin-top: 6px;
+}
+
 .admin-permissions-box {
     background: #222;
     padding: 15px;
@@ -858,5 +906,20 @@ select:focus {
 
     .list-item {
         align-items: flex-start;
+    }
+
+    .admin-subtabs {
+        justify-content: center;
+    }
+
+    .admin-subtab {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 0;
+        padding: 9px 10px;
+        font-size: 0.82rem;
+    }
+
+    .admin-summary-grid {
+        grid-template-columns: 1fr 1fr;
     }
 }

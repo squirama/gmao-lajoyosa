@@ -77,3 +77,31 @@ test('createStockItem devuelve 400 si stock_current es negativo', async () => {
     assert.equal(reply.getStatusCode(), 400);
     assert.deepEqual(result, { error: 'stock_current debe ser un entero no negativo' });
 });
+
+test('upsertStockDistribution devuelve 400 si falta la sede', async () => {
+    const reply = createReply();
+    const result = await InventoryController.upsertStockDistribution({
+        body: {
+            spare_part_id: 1,
+            physical_location: 'Almacen central',
+            quantity: 5,
+        },
+    }, reply);
+
+    assert.equal(reply.getStatusCode(), 400);
+    assert.deepEqual(result, { error: 'location_id es obligatorio' });
+});
+
+test('createStockMovement devuelve 400 si falta destino en una entrada', async () => {
+    const reply = createReply();
+    const result = await InventoryController.createStockMovement({
+        body: {
+            spare_part_id: 1,
+            movement_type: 'ENTRY',
+            quantity: 2,
+        },
+    }, reply);
+
+    assert.equal(reply.getStatusCode(), 400);
+    assert.deepEqual(result, { error: 'Debes indicar sede y ubicacion de destino' });
+});

@@ -135,10 +135,14 @@ export default function AdminPanel() {
 
     const [loading, setLoading] = useState(false);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const isSuperAdminView = config.user?.role === 'SUPER_ADMIN' || authHeader?.startsWith('Basic ');
+    const visibleSections = isSuperAdminView
+        ? ADMIN_SECTIONS
+        : ADMIN_SECTIONS.filter((sectionName) => sectionName !== 'locations');
 
     // Modal state.
     const [calendarAsset, setCalendarAsset] = useState(null);
-    const activeTab = ADMIN_SECTIONS.includes(section) ? section : 'assets';
+    const activeTab = visibleSections.includes(section) ? section : 'assets';
 
     const renderLazySection = (node) => (
         <Suspense
@@ -168,10 +172,10 @@ export default function AdminPanel() {
             return;
         }
 
-        if (!ADMIN_SECTIONS.includes(section)) {
+        if (!visibleSections.includes(section)) {
             navigate('/admin/assets', { replace: true });
         }
-    }, [navigate, section]);
+    }, [navigate, section, isSuperAdminView]);
 
     useEffect(() => {
         if (activeTab === 'users' && authHeader) {
@@ -273,7 +277,9 @@ export default function AdminPanel() {
                     <div className="sidebar-brand">GMAO ADMIN <span style={{ fontSize: '0.6rem', color: '#666' }}>v1.2</span></div>
 
                     <button onClick={() => goToAdminSection('planning')} className={`sidebar-btn ${activeTab === 'planning' ? 'active' : ''}`}>Calendario</button>
-                    <button onClick={() => goToAdminSection('locations')} className={`sidebar-btn ${activeTab === 'locations' ? 'active' : ''}`}>Sedes</button>
+                    {isSuperAdminView && (
+                        <button onClick={() => goToAdminSection('locations')} className={`sidebar-btn ${activeTab === 'locations' ? 'active' : ''}`}>Sedes</button>
+                    )}
                     <button onClick={() => goToAdminSection('departments')} className={`sidebar-btn ${activeTab === 'departments' ? 'active' : ''}`}>Areas</button>
                     <button onClick={() => goToAdminSection('assets')} className={`sidebar-btn ${activeTab === 'assets' ? 'active' : ''}`}>Maquinas</button>
                     <button onClick={() => goToAdminSection('plans')} className={`sidebar-btn ${activeTab === 'plans' ? 'active' : ''}`}>Planes</button>
@@ -450,7 +456,7 @@ export default function AdminPanel() {
                     {activeTab === 'inventory' && (
                         renderLazySection(
                             <div className="center-panel" style={{ padding: 0 }}>
-                                <AdminInventory assets={config.assets || []} />
+                                <AdminInventory assets={config.assets || []} currentUserId={config.user?.id} locations={config.locations || []} />
                             </div>
                         )
                     )}

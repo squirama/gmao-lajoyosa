@@ -35,7 +35,8 @@ CREATE TABLE users (
     username VARCHAR(255) UNIQUE,
     password_hash VARCHAR(255),
     session_token VARCHAR(255),
-    location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL
+    location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE user_departments (
@@ -165,4 +166,31 @@ CREATE TABLE part_consumptions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE spare_part_stocks (
+    id SERIAL PRIMARY KEY,
+    spare_part_id INTEGER NOT NULL REFERENCES spare_parts(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    physical_location VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (spare_part_id, location_id, physical_location)
+);
+
+CREATE TABLE spare_part_movements (
+    id SERIAL PRIMARY KEY,
+    spare_part_id INTEGER NOT NULL REFERENCES spare_parts(id) ON DELETE CASCADE,
+    movement_type VARCHAR(20) NOT NULL,
+    quantity INTEGER NOT NULL,
+    source_stock_id INTEGER REFERENCES spare_part_stocks(id) ON DELETE SET NULL,
+    destination_stock_id INTEGER REFERENCES spare_part_stocks(id) ON DELETE SET NULL,
+    notes TEXT,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX idx_plans_is_legal ON maintenance_plans(is_legal);
+CREATE INDEX idx_spare_part_stocks_part_id ON spare_part_stocks(spare_part_id);
+CREATE INDEX idx_spare_part_stocks_location_id ON spare_part_stocks(location_id);
+CREATE INDEX idx_spare_part_movements_part_id ON spare_part_movements(spare_part_id);
+CREATE INDEX idx_spare_part_movements_created_at ON spare_part_movements(created_at DESC);
