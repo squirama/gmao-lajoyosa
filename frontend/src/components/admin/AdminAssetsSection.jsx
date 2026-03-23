@@ -22,74 +22,94 @@ export default function AdminAssetsSection({
         : [];
 
     return (
-        <div className="center-panel">
-            <div className="card" style={{ border: '2px solid var(--neon-orange)', marginBottom: 20 }}>
+        <div className="center-panel admin-section">
+            <div className="card admin-form-card" style={{ border: '2px solid var(--neon-orange)' }}>
                 <h2>{editingAsset ? 'EDITAR MAQUINA' : 'NUEVA MAQUINA'}</h2>
-                <form onSubmit={handleAssetSubmit} style={{ display: 'grid', gap: 15 }}>
-                    <div style={{ display: 'flex', gap: 15 }}>
+                <form onSubmit={handleAssetSubmit} className="admin-form-grid">
+                    <div>
+                        <label className="hmi-label">Sede:</label>
                         <select
                             value={selectedLocationId}
                             onChange={(e) => handleLocationChange(e.target.value)}
-                            className="operator-select"
-                            style={{ flex: 1 }}
+                            className="operator-select admin-field"
                         >
                             <option value="">-- Sede --</option>
                             {Array.isArray(locations) && locations.map((location) => (
                                 <option key={location.id} value={location.id}>{location.name}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div>
+                        <label className="hmi-label">Area:</label>
                         <select
                             value={assetForm.dept_id}
                             onChange={(e) => setAssetForm({ ...assetForm, dept_id: e.target.value })}
-                            className="operator-select"
+                            className="operator-select admin-field"
                             required
-                            style={{ flex: 1 }}
                         >
-                            <option value="">-- Dept --</option>
+                            <option value="">-- Area --</option>
                             {filteredDepartments.map((department) => (
                                 <option key={department.id} value={department.id}>{department.name}</option>
                             ))}
                         </select>
                     </div>
-                    <input
-                        placeholder="Nombre"
-                        value={assetForm.name}
-                        onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
-                        className="operator-select"
-                        required
-                    />
-                    <div style={{ display: 'flex', gap: 10 }}>
+
+                    <div className="admin-field--full">
+                        <label className="hmi-label">Nombre:</label>
+                        <input
+                            placeholder="Nombre"
+                            value={assetForm.name}
+                            onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
+                            className="operator-select admin-field"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="hmi-label">Marca:</label>
                         <input
                             placeholder="Marca"
                             value={assetForm.brand}
                             onChange={(e) => setAssetForm({ ...assetForm, brand: e.target.value })}
-                            className="operator-select"
-                            style={{ flex: 1 }}
+                            className="operator-select admin-field"
                         />
+                    </div>
+
+                    <div>
+                        <label className="hmi-label">Modelo:</label>
                         <input
                             placeholder="Modelo"
                             value={assetForm.model}
                             onChange={(e) => setAssetForm({ ...assetForm, model: e.target.value })}
-                            className="operator-select"
-                            style={{ flex: 1 }}
+                            className="operator-select admin-field"
                         />
                     </div>
-                    <input
-                        placeholder="Manual (filename)"
-                        value={assetForm.manual_filename}
-                        onChange={(e) => setAssetForm({ ...assetForm, manual_filename: e.target.value })}
-                        className="operator-select"
-                    />
-                    <input type="file" multiple onChange={(e) => setUploadFiles(Array.from(e.target.files || []))} style={{ color: 'white' }} />
-                    {uploadFiles.length > 0 && <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{uploadFiles.length} archivos seleccionados</div>}
-                    <div style={{ display: 'flex', gap: 20 }}>
-                        <button className="hmi-btn" style={{ flex: 1 }}>GUARDAR</button>
+
+                    <div className="admin-field--full">
+                        <label className="hmi-label">Manual:</label>
+                        <input
+                            placeholder="Manual (filename)"
+                            value={assetForm.manual_filename}
+                            onChange={(e) => setAssetForm({ ...assetForm, manual_filename: e.target.value })}
+                            className="operator-select admin-field"
+                        />
+                    </div>
+
+                    <div className="admin-field--full">
+                        <label className="hmi-label">Archivos:</label>
+                        <input type="file" multiple onChange={(e) => setUploadFiles(Array.from(e.target.files || []))} style={{ color: 'white', marginBottom: 0 }} />
+                        {uploadFiles.length > 0 && <div className="admin-form-note">{uploadFiles.length} archivos seleccionados</div>}
+                    </div>
+
+                    <div className="admin-actions admin-field--full">
+                        <button className="hmi-btn">GUARDAR</button>
                         {editingAsset && <button type="button" onClick={resetAssetForm} className="btn-danger">CANCELAR</button>}
                     </div>
                 </form>
             </div>
 
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div className="admin-list-grid">
                 {Array.isArray(assets) && assets.length > 0 ? (
                     assets.map((asset) => (
                         <div key={asset.id} className="list-item">
@@ -97,7 +117,7 @@ export default function AdminAssetsSection({
                                 <div style={{ color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '1.2rem' }}>{asset.name}</div>
                                 <div style={{ color: '#aaa' }}>{asset.brand} {asset.model}</div>
                             </div>
-                            <div style={{ display: 'flex', gap: 10 }}>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                 <button onClick={() => onOpenCalendar(asset)} className="btn-manual" style={{ borderColor: 'var(--neon-purple)', color: 'white' }}>
                                     CALENDARIO
                                 </button>
