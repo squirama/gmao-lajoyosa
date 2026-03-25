@@ -585,9 +585,16 @@ export default function ActionPanel({ context }) {
 
             <div className="bottom-nav">
                 <button onClick={() => navigate('/asset')} style={{ background: '#333', color: '#ccc', border: '1px solid #555' }}>
-                    ⬅ Cancelar / Volver
+                    Volver
+                </button>
+                <button
+                    onClick={() => navigate(`/calendar?scope=asset&asset_id=${context.asset.id}`)}
+                    style={{ background: 'var(--neon-purple)', color: 'white' }}
+                >
+                    Ver calendario maquina
                 </button>
             </div>
         </div>
     );
 }
+

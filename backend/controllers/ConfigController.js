@@ -38,6 +38,70 @@ async function withScopedAccess(reply, authorizationHeader, handler) {
     }
 }
 
+async function requireSuperAdmin(req, reply) {
+    const client = await db.connect();
+    try {
+        const access = await getScopedAccess(client, req.headers.authorization);
+        if (!access) {
+            reply.code(401).send({ error: 'Autenticacion requerida' });
+            return null;
+        }
+        if (!access.isSuperAdmin) {
+            reply.code(403).send({ error: 'Solo un super admin puede gestionar sedes' });
+            return null;
+        }
+        return access;
+    } finally {
+        client.release();
+    }
+}
+
+async function requireScopedAccess(req, reply) {
+    const client = await db.connect();
+    try {
+        const access = await getScopedAccess(client, req.headers.authorization);
+        if (!access) {
+            reply.code(401).send({ error: 'Autenticacion requerida' });
+            return null;
+        }
+        return access;
+    } finally {
+        client.release();
+    }
+}
+
+async function canManageLocationId(access, locationId) {
+    if (!access) return false;
+    if (access.isSuperAdmin) return true;
+    if (access.allowedDeptIds.length > 0) {
+        const res = await db.query(
+            'SELECT 1 FROM departments WHERE location_id = $1 AND id = ANY($2::int[]) LIMIT 1',
+            [locationId, access.allowedDeptIds]
+        );
+        return res.rows.length > 0;
+    }
+    if (access.isAdmin && access.locationId) {
+        return Number(access.locationId) === Number(locationId);
+    }
+    return false;
+}
+
+async function canManageDepartmentId(access, departmentId) {
+    if (!access) return false;
+    if (access.isSuperAdmin) return true;
+    if (access.allowedDeptIds.length > 0) {
+        return access.allowedDeptIds.includes(Number(departmentId));
+    }
+    if (access.isAdmin && access.locationId) {
+        const res = await db.query(
+            'SELECT 1 FROM departments WHERE id = $1 AND location_id = $2 LIMIT 1',
+            [departmentId, access.locationId]
+        );
+        return res.rows.length > 0;
+    }
+    return false;
+}
+
 exports.getConfig = async (req, reply) => {
     const client = await db.connect();
 
@@ -95,6 +159,12 @@ exports.createDepartment = async (req, reply) => {
         return sendValidationError(reply, error);
     }
 
+    const access = await requireScopedAccess(req, reply);
+    if (!access) return reply;
+    if (!(await canManageLocationId(access, locationId))) {
+        return reply.code(403).send({ error: 'No autorizado para crear areas en esa sede' });
+    }
+
     try {
         const res = await db.query(
             'INSERT INTO departments (location_id, name, email) VALUES ($1, $2, $3) RETURNING *',
@@ -124,6 +194,12 @@ exports.updateDepartment = async (req, reply) => {
         return sendValidationError(reply, error);
     }
 
+    const access = await requireScopedAccess(req, reply);
+    if (!access) return reply;
+    if (!(await canManageDepartmentId(access, id)) || !(await canManageLocationId(access, locationId))) {
+        return reply.code(403).send({ error: 'No autorizado para editar esta area' });
+    }
+
     try {
         const res = await db.query(
             'UPDATE departments SET name = $1, location_id = $2, email = $3 WHERE id = $4 RETURNING *',
@@ -144,6 +220,12 @@ exports.deleteDepartment = async (req, reply) => {
         id = ensurePositiveInteger(req.params.id, 'id');
     } catch (error) {
         return sendValidationError(reply, error);
+    }
+
+    const access = await requireScopedAccess(req, reply);
+    if (!access) return reply;
+    if (!(await canManageDepartmentId(access, id))) {
+        return reply.code(403).send({ error: 'No autorizado para borrar esta area' });
     }
 
     try {
@@ -169,6 +251,9 @@ exports.createLocation = async (req, reply) => {
     } catch (error) {
         return sendValidationError(reply, error);
     }
+
+    const access = await requireSuperAdmin(req, reply);
+    if (!access) return reply;
 
     try {
         const res = await db.query(
@@ -199,6 +284,9 @@ exports.updateLocation = async (req, reply) => {
         return sendValidationError(reply, error);
     }
 
+    const access = await requireSuperAdmin(req, reply);
+    if (!access) return reply;
+
     try {
         const res = await db.query(
             'UPDATE locations SET name = $1, address = $2, email = $3 WHERE id = $4 RETURNING *',
@@ -221,6 +309,9 @@ exports.deleteLocation = async (req, reply) => {
         return sendValidationError(reply, error);
     }
 
+    const access = await requireSuperAdmin(req, reply);
+    if (!access) return reply;
+
     try {
         await db.query('DELETE FROM locations WHERE id = $1', [id]);
         return { success: true };
@@ -233,7 +324,16 @@ exports.deleteLocation = async (req, reply) => {
 };
 
 exports.getCalendarEvents = async (req, reply) => {
-    const { department_id } = req.query;
+    let departmentId = null;
+    let locationId = null;
+    let assetId = null;
+    try {
+        departmentId = ensurePositiveInteger(req.query.department_id, 'department_id', { required: false });
+        locationId = ensurePositiveInteger(req.query.location_id, 'location_id', { required: false });
+        assetId = ensurePositiveInteger(req.query.asset_id, 'asset_id', { required: false });
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
     const client = await db.connect();
 
     try {
@@ -256,7 +356,7 @@ exports.getCalendarEvents = async (req, reply) => {
             return [];
         }
 
-        if (!isSuperAdmin && !isAdmin && department_id && !allowedDeptIds.includes(parseInt(department_id, 10))) {
+        if (!isSuperAdmin && !isAdmin && departmentId && !allowedDeptIds.includes(Number(departmentId))) {
             return [];
         }
 
@@ -264,8 +364,16 @@ exports.getCalendarEvents = async (req, reply) => {
         today.setHours(0, 0, 0, 0);
 
         const [historyRes, plansRes, exceptionsRes] = await Promise.all([
-            fetchCalendarHistory(client, access, { departmentId: department_id }),
-            fetchCalendarPlans(client, access, { departmentId: department_id }),
+            fetchCalendarHistory(client, access, {
+                departmentId,
+                locationId,
+                assetId,
+            }),
+            fetchCalendarPlans(client, access, {
+                departmentId,
+                locationId,
+                assetId,
+            }),
             client.query('SELECT * FROM plan_exceptions'),
         ]);
 

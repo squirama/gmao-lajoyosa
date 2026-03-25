@@ -240,6 +240,14 @@ export default function AdminPanel() {
         navigate(`/admin/${nextSection}`);
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('user_info');
+        delete axios.defaults.headers.common.Authorization;
+        setAuthHeader(null);
+        window.location.href = '/login';
+    };
+
     // Calendar click handler.
     const handleSchedulerEvent = (evt) => {
         if (evt.isReal) {
@@ -295,7 +303,7 @@ export default function AdminPanel() {
                         </div>
                         <div style={{ display: 'flex', gap: 5 }}>
                             <button onClick={() => window.location.href = '/'} className="sidebar-btn" style={{ flex: 1, fontSize: '0.8rem', color: 'var(--neon-cyan)' }}>Ir a Web</button>
-                            <button onClick={() => setAuthHeader(null)} className="sidebar-btn" style={{ flex: 1, fontSize: '0.8rem', color: 'var(--neon-red)' }}>Salir</button>
+                            <button onClick={handleLogout} className="sidebar-btn" style={{ flex: 1, fontSize: '0.8rem', color: 'var(--neon-red)' }}>Cerrar sesion</button>
                         </div>
                     </div>
                 </div>

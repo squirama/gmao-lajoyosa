@@ -12,15 +12,23 @@ export default function DepartmentSelect({ context, setContext }) {
             return;
         }
 
-        axios.get(`/api/config/departments?location_id=${context.location.id}`)
-            .then(res => {
+        const token = localStorage.getItem('session_token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
+        axios.get(`/api/config/departments?location_id=${context.location.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => {
                 setDepts(Array.isArray(res.data) ? res.data : []);
             })
-            .catch(err => console.error(err));
-    }, [context.location]);
+            .catch((err) => console.error(err));
+    }, [context.location, navigate]);
 
     const handleSelect = (dept) => {
-        setContext(prev => ({ ...prev, department: dept }));
+        setContext((prev) => ({ ...prev, department: dept }));
         navigate('/asset');
     };
 
@@ -29,16 +37,19 @@ export default function DepartmentSelect({ context, setContext }) {
             <div className="nav-bar">
                 <span>{context.location?.name}</span>
             </div>
-            <h1 className="title">Seleccione Área</h1>
+            <h1 className="title">Seleccione Area</h1>
             <div className="grid-menu">
-                {depts.map(d => (
-                    <button key={d.id} className="btn-large" onClick={() => handleSelect(d)}>
-                        {d.name}
+                {depts.map((dept) => (
+                    <button key={dept.id} className="btn-large" onClick={() => handleSelect(dept)}>
+                        {dept.name}
                     </button>
                 ))}
             </div>
             <div className="bottom-nav">
-                <button onClick={() => navigate('/')}>Atrás</button>
+                <button onClick={() => navigate('/')}>Atras</button>
+                <button onClick={() => navigate(`/calendar?scope=location&location_id=${context.location.id}`)} style={{ background: 'var(--neon-purple)', color: 'white' }}>
+                    Ver calendario sede
+                </button>
             </div>
         </div>
     );

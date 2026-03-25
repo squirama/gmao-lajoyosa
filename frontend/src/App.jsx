@@ -43,10 +43,11 @@ function RouteLoadingFallback() {
 function AppContent({ context, setContext, logout }) {
     const location = useLocation();
     const canAccessAdmin = context.user?.role === 'SUPER_ADMIN' || context.user?.role === 'ADMIN' || context.user?.role === 'admin';
+    const showHomeActions = context.token && !location.pathname.startsWith('/admin') && location.pathname === '/';
 
     return (
         <div className="page-container">
-            {context.token && !location.pathname.startsWith('/admin') && (
+            {showHomeActions && (
                 <div className="app-floating-actions">
                     {canAccessAdmin && (
                         <button
@@ -61,7 +62,7 @@ function AppContent({ context, setContext, logout }) {
                         onClick={logout}
                         className="app-floating-btn app-floating-btn--logout"
                     >
-                        Salir
+                        Cerrar sesion
                     </button>
                 </div>
             )}

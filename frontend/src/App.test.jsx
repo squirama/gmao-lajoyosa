@@ -54,7 +54,7 @@ describe('App', () => {
 
         expect(await screen.findByText('Location View')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /panel admin/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /salir/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /cerrar sesion/i })).toBeInTheDocument();
         expect(screen.getByText('Request Button')).toBeInTheDocument();
     });
 

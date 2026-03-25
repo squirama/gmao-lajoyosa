@@ -4,6 +4,18 @@ async function fetchLocations(client, access) {
         return res.rows;
     }
 
+    if (access.allowedDeptIds.length > 0) {
+        const res = await client.query(`
+            SELECT DISTINCT l.*
+            FROM locations l
+            JOIN departments d ON l.id = d.location_id
+            JOIN user_departments ud ON ud.department_id = d.id
+            WHERE ud.user_id = $1
+            ORDER BY l.id
+        `, [access.user.id]);
+        return res.rows;
+    }
+
     if (access.isAdmin && access.locationId) {
         const res = await client.query(
             'SELECT * FROM locations WHERE id = $1 ORDER BY id',
@@ -12,27 +24,18 @@ async function fetchLocations(client, access) {
         return res.rows;
     }
 
-    if (access.allowedDeptIds.length === 0) return [];
-
-    const res = await client.query(`
-        SELECT DISTINCT l.*
-        FROM locations l
-        JOIN departments d ON l.id = d.location_id
-        JOIN user_departments ud ON ud.department_id = d.id
-        WHERE ud.user_id = $1
-        ORDER BY l.id
-    `, [access.user.id]);
-    return res.rows;
+    return [];
 }
 
 function applyScopedDepartmentFilters(filters, params, access, columnName, { departmentId = null, locationId = null } = {}) {
-    if (access.isAdmin && access.locationId) {
+    if (!access.isSuperAdmin && access.allowedDeptIds.length > 0) {
+        params.push(access.allowedDeptIds);
+        filters.push(`${columnName} = ANY($${params.length}::int[])`);
+    } else if (access.isAdmin && access.locationId) {
         params.push(access.locationId);
         filters.push(`${columnName} IN (SELECT id FROM departments WHERE location_id = $${params.length})`);
     } else if (!access.isSuperAdmin) {
-        if (access.allowedDeptIds.length === 0) return false;
-        params.push(access.allowedDeptIds);
-        filters.push(`${columnName} = ANY($${params.length}::int[])`);
+        return false;
     }
 
     if (departmentId) {
@@ -52,13 +55,14 @@ async function fetchDepartments(client, access, { locationId = null } = {}) {
     const params = [];
     const filters = [];
 
-    if (access.isAdmin && access.locationId) {
+    if (!access.isSuperAdmin && access.allowedDeptIds.length > 0) {
+        params.push(access.allowedDeptIds);
+        filters.push(`id = ANY($${params.length}::int[])`);
+    } else if (access.isAdmin && access.locationId) {
         params.push(access.locationId);
         filters.push(`location_id = $${params.length}`);
     } else if (!access.isSuperAdmin) {
-        if (access.allowedDeptIds.length === 0) return [];
-        params.push(access.allowedDeptIds);
-        filters.push(`id = ANY($${params.length}::int[])`);
+        return [];
     }
 
     if (locationId) {
@@ -78,13 +82,14 @@ async function fetchAssets(client, access, { departmentId = null, locationId = n
     const params = [];
     const filters = ['a.active = true'];
 
-    if (access.isAdmin && access.locationId) {
+    if (!access.isSuperAdmin && access.allowedDeptIds.length > 0) {
+        params.push(access.allowedDeptIds);
+        filters.push(`a.dept_id = ANY($${params.length}::int[])`);
+    } else if (access.isAdmin && access.locationId) {
         params.push(access.locationId);
         filters.push(`d.location_id = $${params.length}`);
     } else if (!access.isSuperAdmin) {
-        if (access.allowedDeptIds.length === 0) return [];
-        params.push(access.allowedDeptIds);
-        filters.push(`a.dept_id = ANY($${params.length}::int[])`);
+        return [];
     }
 
     if (departmentId) {
@@ -112,13 +117,14 @@ async function fetchPlans(client, access, { assetId = null, departmentId = null,
     const params = [];
     const filters = ['p.active = true'];
 
-    if (access.isAdmin && access.locationId) {
+    if (!access.isSuperAdmin && access.allowedDeptIds.length > 0) {
+        params.push(access.allowedDeptIds);
+        filters.push(`a.dept_id = ANY($${params.length}::int[])`);
+    } else if (access.isAdmin && access.locationId) {
         params.push(access.locationId);
         filters.push(`d.location_id = $${params.length}`);
     } else if (!access.isSuperAdmin) {
-        if (access.allowedDeptIds.length === 0) return [];
-        params.push(access.allowedDeptIds);
-        filters.push(`a.dept_id = ANY($${params.length}::int[])`);
+        return [];
     }
 
     if (assetId) {
@@ -148,6 +154,19 @@ async function fetchPlans(client, access, { assetId = null, departmentId = null,
 }
 
 async function fetchStats(client, access) {
+    if (!access.isSuperAdmin && access.allowedDeptIds.length > 0) {
+        const res = await client.query(`
+            SELECT l.name, COUNT(a.id) as total_assets
+            FROM locations l
+            LEFT JOIN departments d ON l.id = d.location_id
+            LEFT JOIN assets a ON d.id = a.dept_id
+            WHERE d.id = ANY($1::int[])
+            GROUP BY l.id, l.name
+            ORDER BY l.id
+        `, [access.allowedDeptIds]);
+        return res.rows;
+    }
+
     if (access.isAdmin && access.locationId) {
         const res = await client.query(`
             SELECT l.name, COUNT(a.id) as total_assets
@@ -177,12 +196,17 @@ async function fetchPlanExceptions(client) {
     return res.rows;
 }
 
-async function fetchCalendarHistory(client, access, { departmentId = null } = {}) {
+async function fetchCalendarHistory(client, access, { departmentId = null, locationId = null, assetId = null } = {}) {
     const params = [];
     const filters = [];
 
-    const hasScope = applyScopedDepartmentFilters(filters, params, access, 'a.dept_id', { departmentId });
+    const hasScope = applyScopedDepartmentFilters(filters, params, access, 'a.dept_id', { departmentId, locationId });
     if (!access.isSuperAdmin && !hasScope) return [];
+
+    if (assetId) {
+        params.push(Number(assetId));
+        filters.push(`h.asset_id = $${params.length}`);
+    }
 
     const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
     const res = await client.query(
@@ -196,12 +220,17 @@ async function fetchCalendarHistory(client, access, { departmentId = null } = {}
     return res.rows;
 }
 
-async function fetchCalendarPlans(client, access, { departmentId = null } = {}) {
+async function fetchCalendarPlans(client, access, { departmentId = null, locationId = null, assetId = null } = {}) {
     const params = [];
     const filters = ['p.active = true'];
 
-    const hasScope = applyScopedDepartmentFilters(filters, params, access, 'a.dept_id', { departmentId });
+    const hasScope = applyScopedDepartmentFilters(filters, params, access, 'a.dept_id', { departmentId, locationId });
     if (!access.isSuperAdmin && !hasScope) return [];
+
+    if (assetId) {
+        params.push(Number(assetId));
+        filters.push(`p.asset_id = $${params.length}`);
+    }
 
     const res = await client.query(
         `SELECT p.*, a.name as asset_name, a.dept_id

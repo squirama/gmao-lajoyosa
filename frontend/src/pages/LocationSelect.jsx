@@ -86,6 +86,11 @@ export default function LocationSelect({ setContext }) {
                     </button>
                 ))}
             </div>
+            <div className="bottom-nav">
+                <button onClick={() => navigate('/calendar?scope=global')} style={{ background: 'var(--neon-purple)', color: 'white' }}>
+                    Ver calendario general
+                </button>
+            </div>
         </div>
     );
 }
