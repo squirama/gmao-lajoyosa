@@ -16,6 +16,7 @@
   --glow-green: 0 4px 10px rgba(0, 0, 0, 0.22);
   --glow-red: 0 4px 10px rgba(0, 0, 0, 0.22);
   --glow-orange: 0 4px 10px rgba(0, 0, 0, 0.22);
+  --action-panel-block-width: 940px;
 
   --header-bg: #1a2430;
 }
@@ -138,6 +139,7 @@ button {
   min-height: 120px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
   margin-top: 10px;
+  box-sizing: border-box;
 }
 
 .hmi-label {
@@ -206,7 +208,7 @@ button {
 .action-panel-primary-submit,
 .action-panel-submit-row {
   width: 100%;
-  max-width: 920px;
+  max-width: var(--action-panel-block-width);
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
@@ -216,11 +218,56 @@ button {
   margin-top: 18px;
 }
 
+.action-panel-details .hmi-textarea,
+.action-panel-upload-box input,
+.action-panel-duration-box input,
+.action-panel-inventory-box input,
+.action-panel-inventory-box select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.action-panel-meta-row {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.action-panel-duration-box {
+  flex: 0 0 auto;
+}
+
+.action-panel-upload-box {
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.action-panel-upload-box input[type="file"] {
+  display: block;
+  width: 100%;
+}
+
 .action-panel-inventory-box {
   width: 100%;
-  max-width: 920px;
+  max-width: var(--action-panel-block-width);
   box-sizing: border-box;
   align-self: center;
+}
+
+.action-panel-topbar {
+  width: 100%;
+  max-width: var(--action-panel-block-width);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.action-panel-inventory-search .operator-select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .action-panel-primary-submit .btn-accent,
