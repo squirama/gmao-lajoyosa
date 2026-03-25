@@ -19,8 +19,43 @@ export default function ActionPanel({ context }) {
     // Inventory state
     const [inventory, setInventory] = useState([]);
     const [consumedParts, setConsumedParts] = useState([]); // [{ spare_part_id, quantity, name }]
+    const [inventorySearch, setInventorySearch] = useState("");
+    const [selectedPartId, setSelectedPartId] = useState("");
+    const [selectedPartQty, setSelectedPartQty] = useState(1);
 
     const navigate = useNavigate();
+
+    const compatibleInventory = inventory.filter((part) => {
+        const isUniversal = !part.compatible_assets || part.compatible_assets.length === 0;
+        const isCompatible = part.compatible_assets && part.compatible_assets.includes(context.asset?.id);
+        return part.active && (isUniversal || isCompatible);
+    });
+
+    const filteredInventory = compatibleInventory.filter((part) => {
+        const query = inventorySearch.trim().toLowerCase();
+        if (!query) return true;
+        const haystack = `${part.part_number || ''} ${part.name || ''}`.toLowerCase();
+        return haystack.includes(query);
+    });
+
+    const addConsumedPart = () => {
+        const partId = parseInt(selectedPartId, 10);
+        const qty = parseInt(selectedPartQty, 10);
+
+        if (!partId || qty <= 0) return;
+
+        const part = inventory.find((item) => item.id === partId);
+        if (!part) return;
+
+        setConsumedParts((prev) => [...prev, {
+            id: part.id,
+            name: part.name,
+            part_number: part.part_number,
+            qty,
+        }]);
+        setSelectedPartId("");
+        setSelectedPartQty(1);
+    };
 
     useEffect(() => {
         if (!context.asset) {
@@ -50,12 +85,16 @@ export default function ActionPanel({ context }) {
     }, [context.asset, context.user, navigate]);
 
     // Handle Checkbox Toggle
-    const toggleTask = (planId) => {
+    const toggleTask = (planId, scheduledDate = null) => {
         setSelectedTasks(prev => {
-            const current = prev[planId] || { checked: false, alert: false, comment: '' };
+            const current = prev[planId] || { checked: false, alert: false, comment: '', scheduledDate: null };
             return {
                 ...prev,
-                [planId]: { ...current, checked: !current.checked }
+                [planId]: {
+                    ...current,
+                    checked: !current.checked,
+                    scheduledDate: scheduledDate || current.scheduledDate || null,
+                }
             };
         });
     };
@@ -64,7 +103,7 @@ export default function ActionPanel({ context }) {
     const toggleAlert = (planId, e) => {
         e.stopPropagation();
         setSelectedTasks(prev => {
-            const current = prev[planId] || { checked: false, alert: false, comment: '' };
+            const current = prev[planId] || { checked: false, alert: false, comment: '', scheduledDate: null };
             return {
                 ...prev,
                 [planId]: { ...current, alert: !current.alert, checked: true }
@@ -87,7 +126,8 @@ export default function ActionPanel({ context }) {
                     description: plan ? plan.task_description : "Tarea Desconocida",
                     checked: true,
                     alert: val.alert,
-                    comment: val.comment
+                    comment: val.comment,
+                    scheduled_date: val.scheduledDate || null,
                 };
             });
 
@@ -172,6 +212,7 @@ export default function ActionPanel({ context }) {
                         operator_id: operator,
                         notes: combinedNotes,
                         alert: task.alert,
+                        scheduled_date: task.scheduled_date,
                         document_path: documentPath, // Guardar el archivo adjunto
                         consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty }))
                     });
@@ -232,7 +273,7 @@ export default function ActionPanel({ context }) {
 
     const handleDoAlert = (alert) => {
         if (alert.asset_id === context.asset.id) {
-            toggleTask(alert.plan_id);
+            toggleTask(alert.plan_id, alert.scheduled_date);
             alert("Tarea seleccionada en la lista principal.");
             setShowAlertsModal(false);
         } else {
@@ -330,7 +371,7 @@ export default function ActionPanel({ context }) {
                 </div>
 
                 {/* Task List (Checkboxes) */}
-                <div className="tasks-container action-panel-tasks" style={{
+                <div className="tasks-container action-panel-tasks action-panel-section-card" style={{
                     maxHeight: '400px',
                     overflowY: 'auto',
                     background: '#111',
@@ -441,25 +482,36 @@ export default function ActionPanel({ context }) {
                     )}
                 </div>
 
-                {/* Global Comment / General Breakdown */}
-                <div style={{ borderTop: '1px solid #333', paddingTop: '20px' }}>
+                <div className="action-panel-primary-submit" style={{ width: '100%', marginTop: '16px' }}>
+                    <button
+                        className="btn-accent"
+                        style={{ width: '100%', margin: '0 auto', display: 'block', minHeight: '96px', padding: '20px 24px', background: 'var(--neon-green)', color: 'black', fontWeight: 'bold', fontSize: '1.2rem' }}
+                        onClick={() => handleSubmit(false)}
+                        disabled={loading}
+                    >
+                        GUARDAR TAREAS REALIZADAS
+                    </button>
+                </div>
+
+                {/* Optional notes and execution details */}
+                <div className="action-panel-details action-panel-section-card" style={{ borderTop: '1px solid #333', paddingTop: '20px' }}>
                     <label className="hmi-label" style={{ color: 'var(--neon-orange)' }}>
-                        OBSERVACIONES GLOBALES / INCIDENCIA:
+                        OBSERVACIONES:
                     </label>
                     <textarea
                         className="hmi-textarea"
-                        placeholder="Describa el PROBLEMA / AVERÍA..."
+                        placeholder="Anade observaciones si quieres dejar constancia de algo..."
                         value={globalComment}
                         onChange={e => setGlobalComment(e.target.value)}
                         style={{ height: '80px' }}
                     />
 
                     <label className="hmi-label" style={{ color: 'var(--neon-green)', marginTop: '10px' }}>
-                        SOLUCIÓN APLICADA:
+                        SOLUCION APLICADA:
                     </label>
                     <textarea
                         className="hmi-textarea"
-                        placeholder="Describa la SOLUCIÓN aplicada..."
+                        placeholder="Indica la solucion aplicada si procede..."
                         value={solution}
                         onChange={e => setSolution(e.target.value)}
                         style={{ height: '80px', borderColor: 'var(--neon-green)' }}
@@ -481,7 +533,7 @@ export default function ActionPanel({ context }) {
                             />
                         </div>
                         <div className="action-panel-upload-box" style={{ flex: 1, borderLeft: '1px solid #333', paddingLeft: '20px' }}>
-                            <label className="hmi-label" style={{ color: 'var(--neon-purple)', display: 'block' }}>📎 ADJUNTAR DOCUMENTO / FOTO (OPCIONAL):</label>
+                            <label className="hmi-label" style={{ color: 'var(--neon-purple)', display: 'block' }}>Adjuntar documento / foto:</label>
                             <input
                                 type="file"
                                 onChange={e => setUploadFiles(Array.from(e.target.files))}
@@ -499,47 +551,58 @@ export default function ActionPanel({ context }) {
                             )}
                         </div>
                     </div>
+                </div>
 
-                    {/* SECCIÓN INVENTARIO / REPUESTOS */}
-                    <div style={{ marginTop: '25px', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
-                        <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>📦 REPUESTOS UTILIZADOS (Opcional):</label>
+                {/* Inventario / Repuestos */}
+                <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', boxSizing: 'border-box', marginTop: '25px', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
+                        <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>Repuestos utilizados:</label>
+
+                        <div className="action-panel-inventory-search" style={{ marginBottom: '12px' }}>
+                            <input
+                                type="text"
+                                value={inventorySearch}
+                                onChange={(e) => setInventorySearch(e.target.value)}
+                                placeholder="Buscar repuesto por referencia o nombre..."
+                                className="operator-select"
+                                style={{ width: '100%', maxWidth: 'none' }}
+                            />
+                        </div>
 
                         <div className="action-panel-inventory-row" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                            <select id="partSelect" className="operator-select" style={{ flex: 1 }}>
+                            <select
+                                value={selectedPartId}
+                                onChange={(e) => setSelectedPartId(e.target.value)}
+                                className="operator-select"
+                                style={{ flex: 1, maxWidth: '100%' }}
+                            >
                                 <option value="">-- Buscar / Seleccionar Repuesto --</option>
-                                {inventory.filter(p => {
-                                    // Muestra si la pieza es Universal (sin máquinas asignadas) 
-                                    // O si la máquina actual está en la lista de compatibles
-                                    const isUniversal = !p.compatible_assets || p.compatible_assets.length === 0;
-                                    const isCompatible = p.compatible_assets && p.compatible_assets.includes(context.asset.id);
-                                    return isUniversal || isCompatible;
-                                }).map(p => (
+                                {filteredInventory.map(p => (
                                     <option key={p.id} value={p.id}>{p.part_number} - {p.name} (Stock: {p.stock_current})</option>
                                 ))}
                             </select>
-                            <input id="partQty" type="number" min="1" defaultValue="1" style={{ width: '80px', textAlign: 'center', background: '#222', color: 'white', border: '1px solid #444' }} />
+                            <input
+                                type="number"
+                                min="1"
+                                value={selectedPartQty}
+                                onChange={(e) => setSelectedPartQty(e.target.value)}
+                                style={{ width: '80px', textAlign: 'center', background: '#222', color: 'white', border: '1px solid #444' }}
+                            />
                             <button
                                 className="hmi-btn" style={{ padding: '0 20px', background: '#444' }}
                                 onClick={(e) => {
                                     e.preventDefault();
-                                    const select = document.getElementById('partSelect');
-                                    const qtyInput = document.getElementById('partQty');
-                                    const partId = parseInt(select.value);
-                                    const qty = parseInt(qtyInput.value);
-
-                                    if (!partId || qty <= 0) return;
-
-                                    const part = inventory.find(i => i.id === partId);
-                                    if (part) {
-                                        setConsumedParts([...consumedParts, { id: part.id, name: part.name, part_number: part.part_number, qty }]);
-                                        select.value = '';
-                                        qtyInput.value = '1';
-                                    }
+                                    addConsumedPart();
                                 }}
                             >
                                 AÑADIR
                             </button>
                         </div>
+
+                        {inventorySearch.trim() !== '' && (
+                            <div style={{ color: '#9fb0bf', fontSize: '0.9rem', marginBottom: '10px' }}>
+                                {filteredInventory.length} repuestos coinciden con la busqueda.
+                            </div>
+                        )}
 
                         {consumedParts.length > 0 && (
                             <div style={{ background: '#111', padding: '10px', borderRadius: '4px' }}>
@@ -558,25 +621,15 @@ export default function ActionPanel({ context }) {
                         )}
                     </div>
 
-                    <div className="action-panel-submit-row" style={{ display: 'flex', gap: '20px', marginTop: '25px' }}>
-                        <button
-                            className="btn-accent"
-                            style={{ flex: 1, background: 'var(--neon-green)', color: 'black', fontWeight: 'bold' }}
-                            onClick={() => handleSubmit(false)}
-                            disabled={loading}
-                        >
-                            ✅ GUARDAR TAREAS REALIZADAS
-                        </button>
-
-                        <button
-                            className="btn-danger"
-                            style={{ flex: 1 }}
-                            onClick={() => handleSubmit(true)}
-                            disabled={loading}
-                        >
-                            🚨 REGISTRAR AVERÍA GENERAL O CORRECTIVO REALIZADO
-                        </button>
-                    </div>
+                <div className="action-panel-submit-row" style={{ marginTop: '25px' }}>
+                    <button
+                        className="btn-danger"
+                        style={{ width: '100%', margin: '0 auto', display: 'block', minHeight: '96px', padding: '20px 24px' }}
+                        onClick={() => handleSubmit(true)}
+                        disabled={loading}
+                    >
+                        REGISTRAR AVERIA GENERAL O CORRECTIVO REALIZADO
+                    </button>
                 </div>
 
                 {/* Back Link */}

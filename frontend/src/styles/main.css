@@ -202,6 +202,42 @@ button {
   background: #24313b;
 }
 
+.action-panel-section-card,
+.action-panel-primary-submit,
+.action-panel-submit-row {
+  width: 100%;
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.action-panel-details {
+  margin-top: 18px;
+}
+
+.action-panel-inventory-box {
+  width: 100%;
+  max-width: 920px;
+  box-sizing: border-box;
+  align-self: center;
+}
+
+@media (min-width: 901px) {
+  .action-panel-details .action-panel-inventory-box {
+    width: calc(100% + 2px);
+    max-width: none;
+    margin-left: -1px;
+    margin-right: -1px;
+  }
+}
+
+.action-panel-primary-submit .btn-accent,
+.action-panel-submit-row .btn-danger {
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
 /* HMI Generic Utilities (Compatibility) */
 .grid-menu,
 .hmi-grid {
@@ -566,6 +602,20 @@ button {
   .action-panel-inventory-row .hmi-btn {
     width: 100% !important;
     max-width: 100% !important;
+  }
+
+  .action-panel-inventory-search .operator-select {
+    display: block;
+    width: calc(100% - 2px) !important;
+    max-width: none !important;
+    box-sizing: border-box;
+    margin: 0;
+  }
+
+  .action-panel-section-card,
+  .action-panel-primary-submit,
+  .action-panel-submit-row {
+    max-width: 100%;
   }
 
   .action-panel-page .tasks-container,
