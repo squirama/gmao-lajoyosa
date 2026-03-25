@@ -554,7 +554,7 @@ export default function ActionPanel({ context }) {
                 </div>
 
                 {/* Inventario / Repuestos */}
-                <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', boxSizing: 'border-box', marginTop: '25px', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
+                <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', maxWidth: '920px', boxSizing: 'border-box', margin: '25px auto 0', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
                         <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>Repuestos utilizados:</label>
 
                         <div className="action-panel-inventory-search" style={{ marginBottom: '12px' }}>

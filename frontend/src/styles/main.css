@@ -223,15 +223,6 @@ button {
   align-self: center;
 }
 
-@media (min-width: 901px) {
-  .action-panel-details .action-panel-inventory-box {
-    width: calc(100% + 2px);
-    max-width: none;
-    margin-left: -1px;
-    margin-right: -1px;
-  }
-}
-
 .action-panel-primary-submit .btn-accent,
 .action-panel-submit-row .btn-danger {
   border-radius: 12px;
