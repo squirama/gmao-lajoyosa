@@ -5,16 +5,18 @@ const { pipeline } = require('stream');
 
 const db = require('../db');
 const {
-    calculateNextPlanDate,
+    calculateNextUnresolvedDueDate,
     calculateSkippedPlanDate,
     clearPlanRuntimeState,
     normalizePlanPayload,
+    resolveScheduledDateToComplete,
 } = require('../services/planService');
 const { sendEmail } = require('../services/emailService');
 const {
     deactivatePlan,
     deletePendingAlertsByPlanId,
     getPlanById,
+    getCompletedScheduledDates,
     getPlanHistory: getPlanHistoryByPlanId,
     getPlanWithAssetName,
     getUserFullName,
@@ -153,6 +155,13 @@ exports.skipPlan = async (request, reply) => {
 
 async function sendPreventiveAlert(plan, operatorId, alertContext) {
     const operatorLabel = operatorId ? `${alertContext.operatorName || 'Desconocido'} (ID: ${operatorId})` : 'Desconocido';
+    const details = [];
+    if (alertContext.notes) {
+        details.push(`<p><strong>Observaciones:</strong> ${alertContext.notes}</p>`);
+    }
+    if (alertContext.solution) {
+        details.push(`<p><strong>Solucion aplicada:</strong> ${alertContext.solution}</p>`);
+    }
 
     await sendEmail({
         senderName: 'GMAO Alert',
@@ -161,9 +170,9 @@ async function sendPreventiveAlert(plan, operatorId, alertContext) {
             <h3>Incidencia durante mantenimiento preventivo</h3>
             <p><strong>Plan:</strong> ${plan.task_description}</p>
             <p><strong>Operario:</strong> ${operatorLabel}</p>
-            <p><strong>Notas:</strong> ${alertContext.text}</p>
+            ${details.join('')}
             <hr>
-            <p>Se ha marcado la campana de alerta durante la ejecucion.</p>
+            <p>${alertContext.reason}</p>
         `,
     });
 }
@@ -176,14 +185,18 @@ exports.completePlan = async (request, reply) => {
     let alert;
     let documentPath;
     let consumedParts;
+    let scheduledDateOverride;
+    let solution;
     try {
         const body = ensureObject(request.body, 'completePlan');
         id = ensurePositiveInteger(request.params.id, 'id');
         operatorId = ensurePositiveInteger(body.operator_id, 'operator_id', { required: false });
         notes = ensureString(body.notes, 'notes', { required: false, allowEmpty: true, maxLength: 4000 });
+        solution = ensureString(body.solution, 'solution', { required: false, allowEmpty: true, maxLength: 4000 });
         alert = ensureBoolean(body.alert, 'alert', { defaultValue: false });
         documentPath = ensureString(body.document_path, 'document_path', { required: false, allowEmpty: true, maxLength: 2000 });
         consumedParts = ensureConsumedParts(body.consumed_parts);
+        scheduledDateOverride = ensureDateOnlyString(body.scheduled_date, 'scheduled_date', { required: false });
     } catch (error) {
         return sendValidationError(reply, error);
     }
@@ -196,10 +209,17 @@ exports.completePlan = async (request, reply) => {
         const plan = await getPlanWithAssetName(client, id);
         if (!plan) throw new Error('Plan Not Found');
 
+        const completedScheduledDates = await getCompletedScheduledDates(client, id);
+        const scheduledDate = scheduledDateOverride || resolveScheduledDateToComplete(plan, {
+            completedScheduledDates,
+        });
+        const nextDate = calculateNextUnresolvedDueDate(plan, [...completedScheduledDates, scheduledDate]);
+
         const historyId = await insertHistory(client, {
             planId: id,
             assetId: plan.asset_id,
             operatorId: operatorId || null,
+            scheduledDate,
             notes: notes || 'Completado desde App',
             documentPath: documentPath || null,
         });
@@ -208,12 +228,18 @@ exports.completePlan = async (request, reply) => {
             await processPartConsumptions(client, consumedParts, { history_id: historyId });
         }
 
-        if (alert) {
+        const hasNotes = Boolean(notes && notes.trim() && notes.trim() !== 'Completado desde App');
+        const hasSolution = Boolean(solution && solution.trim());
+        if (alert || hasNotes || hasSolution) {
             try {
                 const operatorName = operatorId ? await getUserFullName(client, operatorId) : null;
                 await sendPreventiveAlert(plan, operatorId, {
                     operatorName,
-                    text: notes || '',
+                    notes: hasNotes ? notes.trim() : '',
+                    solution: hasSolution ? solution.trim() : '',
+                    reason: alert
+                        ? 'Se ha marcado la campana de alerta durante la ejecucion.'
+                        : 'Se han registrado observaciones o solucion aplicada durante la ejecucion.',
                 });
                 console.log('Preventive alert email sent.');
             } catch (emailError) {
@@ -221,9 +247,8 @@ exports.completePlan = async (request, reply) => {
             }
         }
 
-        const nextDate = calculateNextPlanDate(plan);
         await updatePlanCompletion(client, id, nextDate);
-        await clearPlanRuntimeState(client, id, plan.next_due_date);
+        await clearPlanRuntimeState(client, id, scheduledDate);
 
         await client.query('COMMIT');
         return { success: true, next_due_date: nextDate };

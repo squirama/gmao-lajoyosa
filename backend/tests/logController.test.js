@@ -7,6 +7,14 @@ const { createFakeClient, createReply } = require('./helpers');
 
 test('createLog guarda document_path en intervention_logs', async () => {
     const originalConnect = db.connect;
+    const emailService = require('../services/emailService');
+    const originalSendEmail = emailService.sendEmail;
+    const controllerPath = require.resolve('../controllers/LogController');
+    delete require.cache[controllerPath];
+
+    emailService.sendEmail = async () => true;
+
+    const LogControllerWithEmailStub = require('../controllers/LogController');
 
     const client = createFakeClient(async (sql, params) => {
         if (sql === 'BEGIN' || sql === 'COMMIT') {
@@ -22,13 +30,21 @@ test('createLog guarda document_path en intervention_logs', async () => {
             return { rows: [] };
         }
 
+        if (sql === 'SELECT full_name FROM users WHERE id = $1') {
+            return { rows: [{ full_name: 'Operario Test' }] };
+        }
+
+        if (sql.startsWith('SELECT d.email as dept_email, l.email as loc_email')) {
+            return { rows: [{ dept_email: 'dept@example.com', loc_email: null }] };
+        }
+
         throw new Error(`Unexpected query: ${sql}`);
     });
 
     db.connect = async () => client;
 
     try {
-        const result = await LogController.createLog({
+        const result = await LogControllerWithEmailStub.createLog({
             body: {
                 asset_id: 8,
                 user_id: 2,
@@ -50,5 +66,78 @@ test('createLog guarda document_path en intervention_logs', async () => {
         assert.equal(client.wasReleased(), true);
     } finally {
         db.connect = originalConnect;
+        emailService.sendEmail = originalSendEmail;
+        delete require.cache[controllerPath];
+        require('../controllers/LogController');
+    }
+});
+
+test('createLog envia correo si hay comentario o solucion aunque no haya campana', async () => {
+    const originalConnect = db.connect;
+    const emailService = require('../services/emailService');
+    const originalSendEmail = emailService.sendEmail;
+    const controllerPath = require.resolve('../controllers/LogController');
+    delete require.cache[controllerPath];
+
+    let emailSent = false;
+    emailService.sendEmail = async () => {
+        emailSent = true;
+        return true;
+    };
+
+    const LogControllerWithEmailStub = require('../controllers/LogController');
+
+    const client = createFakeClient(async (sql, params) => {
+        if (sql === 'BEGIN' || sql === 'COMMIT') {
+            return { rows: [] };
+        }
+
+        if (sql.startsWith('INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution, document_path) VALUES')) {
+            return { rows: [{ id: 52 }] };
+        }
+
+        if (sql.startsWith('INSERT INTO intervention_tasks')) {
+            return { rows: [] };
+        }
+
+        if (sql === 'SELECT full_name FROM users WHERE id = $1') {
+            return { rows: [{ full_name: 'Operario Test' }] };
+        }
+
+        if (sql.startsWith('SELECT d.email as dept_email, l.email as loc_email')) {
+            return { rows: [{ dept_email: 'dept@example.com', loc_email: null }] };
+        }
+
+        throw new Error(`Unexpected query: ${sql}`);
+    });
+
+    db.connect = async () => client;
+
+    try {
+        const result = await LogControllerWithEmailStub.createLog({
+            body: {
+                asset_id: 8,
+                user_id: 2,
+                global_comment: 'Se detecta fuga leve',
+                duration_minutes: 12,
+                solution: '',
+                document_path: null,
+                tasks: [{
+                    description: 'AVERIA GENERAL / MANTENIMIENTO CORRECTIVO',
+                    checked: true,
+                    alert: false,
+                    comment: 'Ajuste rapido',
+                }],
+                consumed_parts: [],
+            },
+        }, createReply());
+
+        assert.deepEqual(result, { success: true, id: 52 });
+        assert.equal(emailSent, true);
+    } finally {
+        db.connect = originalConnect;
+        emailService.sendEmail = originalSendEmail;
+        delete require.cache[controllerPath];
+        require('../controllers/LogController');
     }
 });

@@ -152,7 +152,7 @@ export default function ActionPanel({ context }) {
                 for (let i = 0; i < uploadFiles.length; i++) {
                     fd.append('file', uploadFiles[i]);
                 }
-                
+
                 try {
                     const resUpload = await axios.post(`/api/admin/plans/${firstPlanId}/upload`, fd, {
                         headers: { 'Content-Type': 'multipart/form-data' }
@@ -211,6 +211,7 @@ export default function ActionPanel({ context }) {
                     await axios.post(`/api/admin/maintenance-plans/${task.plan_id}/complete`, {
                         operator_id: operator,
                         notes: combinedNotes,
+                        solution: solution,
                         alert: task.alert,
                         scheduled_date: task.scheduled_date,
                         document_path: documentPath, // Guardar el archivo adjunto
@@ -554,72 +555,71 @@ export default function ActionPanel({ context }) {
                 </div>
 
                 {/* Inventario / Repuestos */}
-                <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', maxWidth: '920px', boxSizing: 'border-box', margin: '25px auto 0', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
-                        <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>Repuestos utilizados:</label>
+                <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', maxWidth: '940px', boxSizing: 'border-box', margin: '25px auto 0', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
+                    <label className="hmi-label" style={{ color: 'var(--neon-purple)', marginBottom: '10px' }}>Repuestos utilizados:</label>
 
-                        <div className="action-panel-inventory-search" style={{ marginBottom: '12px' }}>
-                            <input
-                                type="text"
-                                value={inventorySearch}
-                                onChange={(e) => setInventorySearch(e.target.value)}
-                                placeholder="Buscar repuesto por referencia o nombre..."
-                                className="operator-select"
-                                style={{ width: '100%', maxWidth: 'none' }}
-                            />
-                        </div>
-
-                        <div className="action-panel-inventory-row" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                            <select
-                                value={selectedPartId}
-                                onChange={(e) => setSelectedPartId(e.target.value)}
-                                className="operator-select"
-                                style={{ flex: 1, maxWidth: '100%' }}
-                            >
-                                <option value="">-- Buscar / Seleccionar Repuesto --</option>
-                                {filteredInventory.map(p => (
-                                    <option key={p.id} value={p.id}>{p.part_number} - {p.name} (Stock: {p.stock_current})</option>
-                                ))}
-                            </select>
-                            <input
-                                type="number"
-                                min="1"
-                                value={selectedPartQty}
-                                onChange={(e) => setSelectedPartQty(e.target.value)}
-                                style={{ width: '80px', textAlign: 'center', background: '#222', color: 'white', border: '1px solid #444' }}
-                            />
-                            <button
-                                className="hmi-btn" style={{ padding: '0 20px', background: '#444' }}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    addConsumedPart();
-                                }}
-                            >
-                                AÑADIR
-                            </button>
-                        </div>
-
-                        {inventorySearch.trim() !== '' && (
-                            <div style={{ color: '#9fb0bf', fontSize: '0.9rem', marginBottom: '10px' }}>
-                                {filteredInventory.length} repuestos coinciden con la busqueda.
-                            </div>
-                        )}
-
-                        {consumedParts.length > 0 && (
-                            <div style={{ background: '#111', padding: '10px', borderRadius: '4px' }}>
-                                {consumedParts.map((cp, idx) => (
-                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', padding: '5px 0' }}>
-                                        <span style={{ color: '#ccc' }}>{cp.qty}x {cp.part_number} - {cp.name}</span>
-                                        <button
-                                            style={{ background: 'transparent', color: 'red', border: 'none', cursor: 'pointer' }}
-                                            onClick={(e) => { e.preventDefault(); setConsumedParts(consumedParts.filter((_, i) => i !== idx)); }}
-                                        >
-                                            ✖
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                    <div className="action-panel-inventory-search" style={{ marginBottom: '12px' }}>
+                        <input
+                            type="text"
+                            value={inventorySearch}
+                            onChange={(e) => setInventorySearch(e.target.value)}
+                            placeholder="Buscar repuesto por referencia o nombre..."
+                            className="operator-select"
+                        />
                     </div>
+
+                    <div className="action-panel-inventory-row" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                        <select
+                            value={selectedPartId}
+                            onChange={(e) => setSelectedPartId(e.target.value)}
+                            className="operator-select"
+                            style={{ flex: 1, maxWidth: '100%' }}
+                        >
+                            <option value="">-- Buscar / Seleccionar Repuesto --</option>
+                            {filteredInventory.map(p => (
+                                <option key={p.id} value={p.id}>{p.part_number} - {p.name} (Stock: {p.stock_current})</option>
+                            ))}
+                        </select>
+                        <input
+                            type="number"
+                            min="1"
+                            value={selectedPartQty}
+                            onChange={(e) => setSelectedPartQty(e.target.value)}
+                            style={{ width: '80px', textAlign: 'center', background: '#222', color: 'white', border: '1px solid #444' }}
+                        />
+                        <button
+                            className="hmi-btn" style={{ padding: '0 20px', background: '#444' }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                addConsumedPart();
+                            }}
+                        >
+                            AÑADIR
+                        </button>
+                    </div>
+
+                    {inventorySearch.trim() !== '' && (
+                        <div style={{ color: '#9fb0bf', fontSize: '0.9rem', marginBottom: '10px' }}>
+                            {filteredInventory.length} repuestos coinciden con la busqueda.
+                        </div>
+                    )}
+
+                    {consumedParts.length > 0 && (
+                        <div style={{ background: '#111', padding: '10px', borderRadius: '4px' }}>
+                            {consumedParts.map((cp, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', padding: '5px 0' }}>
+                                    <span style={{ color: '#ccc' }}>{cp.qty}x {cp.part_number} - {cp.name}</span>
+                                    <button
+                                        style={{ background: 'transparent', color: 'red', border: 'none', cursor: 'pointer' }}
+                                        onClick={(e) => { e.preventDefault(); setConsumedParts(consumedParts.filter((_, i) => i !== idx)); }}
+                                    >
+                                        ✖
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 <div className="action-panel-submit-row" style={{ marginTop: '25px' }}>
                     <button
