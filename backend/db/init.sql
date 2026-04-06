@@ -13,6 +13,9 @@ CREATE TABLE departments (
     location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255),
+    weekly_reminder_enabled BOOLEAN DEFAULT FALSE,
+    weekly_reminder_email VARCHAR(255),
+    weekly_reminder_last_sent_date DATE,
     UNIQUE(location_id, name)
 );
 
@@ -36,7 +39,9 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     session_token VARCHAR(255),
     location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
-    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    last_login_at TIMESTAMP,
+    last_seen_at TIMESTAMP
 );
 
 CREATE TABLE user_departments (
@@ -63,7 +68,8 @@ CREATE TABLE maintenance_plans (
     active BOOLEAN DEFAULT TRUE,
     notification_email VARCHAR(255),
     is_legal BOOLEAN DEFAULT FALSE,
-    force_dow BOOLEAN DEFAULT FALSE
+    force_dow BOOLEAN DEFAULT FALSE,
+    missed_threshold_email_sent_at TIMESTAMP
 );
 
 CREATE TABLE pending_alerts (
@@ -99,6 +105,7 @@ CREATE TABLE maintenance_history (
     plan_id INTEGER REFERENCES maintenance_plans(id) ON DELETE SET NULL,
     asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
     operator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    scheduled_date DATE,
     performed_date DATE NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -132,6 +139,33 @@ CREATE TABLE intervention_tasks (
     status VARCHAR(50) DEFAULT 'DONE',
     comments TEXT,
     alert_manager BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE user_login_events (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    username_attempt VARCHAR(255),
+    event_type VARCHAR(40) NOT NULL,
+    ip_address VARCHAR(120),
+    user_agent TEXT,
+    meta_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_activity_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    user_role VARCHAR(40),
+    action VARCHAR(120) NOT NULL,
+    method VARCHAR(10) NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    entity_type VARCHAR(80),
+    entity_id INTEGER,
+    status_code INTEGER,
+    ip_address VARCHAR(120),
+    user_agent TEXT,
+    meta_json JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE spare_parts (
@@ -190,7 +224,14 @@ CREATE TABLE spare_part_movements (
 );
 
 CREATE INDEX idx_plans_is_legal ON maintenance_plans(is_legal);
+CREATE INDEX idx_maintenance_history_plan_scheduled ON maintenance_history(plan_id, scheduled_date);
 CREATE INDEX idx_spare_part_stocks_part_id ON spare_part_stocks(spare_part_id);
 CREATE INDEX idx_spare_part_stocks_location_id ON spare_part_stocks(location_id);
 CREATE INDEX idx_spare_part_movements_part_id ON spare_part_movements(spare_part_id);
 CREATE INDEX idx_spare_part_movements_created_at ON spare_part_movements(created_at DESC);
+CREATE INDEX idx_users_last_login_at ON users(last_login_at DESC);
+CREATE INDEX idx_users_last_seen_at ON users(last_seen_at DESC);
+CREATE INDEX idx_user_login_events_user_id_created ON user_login_events(user_id, created_at DESC);
+CREATE INDEX idx_user_login_events_event_type_created ON user_login_events(event_type, created_at DESC);
+CREATE INDEX idx_user_activity_log_user_id_created ON user_activity_log(user_id, created_at DESC);
+CREATE INDEX idx_user_activity_log_created ON user_activity_log(created_at DESC);

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/admin.css'; // Ensure styles are loaded
 import AdminAssetCalendarModal from '../components/admin/AdminAssetCalendarModal';
+import AdminActivitySection from '../components/admin/AdminActivitySection';
 import AdminAssetsSection from '../components/admin/AdminAssetsSection';
 import AdminDepartmentsSection from '../components/admin/AdminDepartmentsSection';
 import AdminErrorBoundary from '../components/admin/AdminErrorBoundary';
@@ -22,6 +23,7 @@ import { usePlanHistory } from '../hooks/usePlanHistory';
 import { useAdminReports } from '../hooks/useAdminReports';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminHistory } from '../hooks/useAdminHistory';
+import { useAdminActivity } from '../hooks/useAdminActivity';
 import { toLocalDateInputValue } from '../utils/adminPanelUtils';
 
 const AdminScheduler = lazy(() => import('../pages/AdminScheduler'));
@@ -35,6 +37,7 @@ const ADMIN_SECTIONS = [
     'plans',
     'inventory',
     'history',
+    'activity',
     'legal',
     'users',
     'reports',
@@ -48,6 +51,7 @@ const ADMIN_SECTION_LABELS = {
     plans: 'Planes',
     inventory: 'Inventario',
     history: 'Historial',
+    activity: 'Actividad',
     legal: 'Normativa',
     users: 'Operarios',
     reports: 'Informes',
@@ -101,6 +105,8 @@ export default function AdminPanel() {
         handleSkip,
         planForm,
         resetPlanForm,
+        saveDepartmentReminderSettings,
+        savePlanNotificationSettings,
         setPlanForm,
         startEditingPlan,
     } = useAdminPlans(authHeader, refreshConfig);
@@ -132,13 +138,22 @@ export default function AdminPanel() {
         historyRows,
         setHistoryFilters,
     } = useAdminHistory(authHeader);
+    const {
+        activityError,
+        activityLoading,
+        activitySummary,
+        activityUsers,
+        recentActivity,
+        recentLogins,
+        refreshActivity,
+    } = useAdminActivity(authHeader);
 
     const [loading, setLoading] = useState(false);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const isSuperAdminView = config.user?.role === 'SUPER_ADMIN' || authHeader?.startsWith('Basic ');
     const visibleSections = isSuperAdminView
         ? ADMIN_SECTIONS
-        : ADMIN_SECTIONS.filter((sectionName) => sectionName !== 'locations');
+        : ADMIN_SECTIONS.filter((sectionName) => !['locations', 'activity'].includes(sectionName));
 
     // Modal state.
     const [calendarAsset, setCalendarAsset] = useState(null);
@@ -180,6 +195,12 @@ export default function AdminPanel() {
     useEffect(() => {
         if (activeTab === 'users' && authHeader) {
             refreshUsers();
+        }
+    }, [activeTab, authHeader]);
+
+    useEffect(() => {
+        if (activeTab === 'activity' && authHeader) {
+            refreshActivity();
         }
     }, [activeTab, authHeader]);
 
@@ -293,6 +314,7 @@ export default function AdminPanel() {
                     <button onClick={() => goToAdminSection('plans')} className={`sidebar-btn ${activeTab === 'plans' ? 'active' : ''}`}>Planes</button>
                     <button onClick={() => goToAdminSection('inventory')} className={`sidebar-btn ${activeTab === 'inventory' ? 'active' : ''}`}>Inventario</button>
                     <button onClick={() => goToAdminSection('history')} className={`sidebar-btn ${activeTab === 'history' ? 'active' : ''}`}>Historial</button>
+                    <button onClick={() => goToAdminSection('activity')} className={`sidebar-btn ${activeTab === 'activity' ? 'active' : ''}`}>Actividad</button>
                     <button onClick={() => goToAdminSection('legal')} className={`sidebar-btn ${activeTab === 'legal' ? 'active' : ''}`} style={{ color: 'var(--neon-orange)' }}>Normativa</button>
                     <button onClick={() => goToAdminSection('users')} className={`sidebar-btn ${activeTab === 'users' ? 'active' : ''}`}>Operarios</button>
                     <button onClick={() => goToAdminSection('reports')} className={`sidebar-btn ${activeTab === 'reports' ? 'active' : ''}`}>Informes</button>
@@ -393,13 +415,17 @@ export default function AdminPanel() {
                         <AdminPlansSection
                             assets={config.assets}
                             deletePlan={deletePlan}
+                            departments={config.departments}
                             editingPlan={editingPlan}
                             handlePlanSubmit={handlePlanSubmit}
                             handleReschedule={handleReschedule}
                             handleSkip={handleSkip}
+                            locations={config.locations}
                             planForm={planForm}
                             plans={config.plans}
                             resetPlanForm={resetPlanForm}
+                            saveDepartmentReminderSettings={saveDepartmentReminderSettings}
+                            savePlanNotificationSettings={savePlanNotificationSettings}
                             setPlanForm={setPlanForm}
                             startEditingPlan={startEditingPlan}
                         />
@@ -467,6 +493,19 @@ export default function AdminPanel() {
                                 <AdminInventory assets={config.assets || []} currentUserId={config.user?.id} locations={config.locations || []} />
                             </div>
                         )
+                    )}
+
+                    {/* K. ACTIVIDAD Y AUDITORIA */}
+                    {activeTab === 'activity' && (
+                        <AdminActivitySection
+                            activityError={activityError}
+                            activityLoading={activityLoading}
+                            activitySummary={activitySummary}
+                            activityUsers={activityUsers}
+                            onRefresh={refreshActivity}
+                            recentActivity={recentActivity}
+                            recentLogins={recentLogins}
+                        />
                     )}
 
                     <AdminAssetCalendarModal

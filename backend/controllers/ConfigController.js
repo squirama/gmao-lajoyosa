@@ -14,6 +14,7 @@ const {
     fetchStats,
 } = require('../repositories/configRepository');
 const {
+    ensureBoolean,
     ensureEmail,
     ensureObject,
     ensurePositiveInteger,
@@ -150,11 +151,19 @@ exports.createDepartment = async (req, reply) => {
     let locationId;
     let name;
     let email;
+    let weeklyReminderEnabled;
+    let weeklyReminderEmail;
     try {
         const body = ensureObject(req.body, 'department');
         locationId = ensurePositiveInteger(body.location_id, 'location_id');
         name = ensureString(body.name, 'name', { maxLength: 160 });
-        email = ensureEmail(body.email, 'email', { required: false });
+        email = body.email === '' || body.email === undefined || body.email === null
+            ? null
+            : ensureEmail(body.email, 'email', { required: false });
+        weeklyReminderEnabled = ensureBoolean(body.weekly_reminder_enabled, 'weekly_reminder_enabled', { defaultValue: false });
+        weeklyReminderEmail = body.weekly_reminder_email === '' || body.weekly_reminder_email === undefined || body.weekly_reminder_email === null
+            ? null
+            : ensureEmail(body.weekly_reminder_email, 'weekly_reminder_email', { required: false });
     } catch (error) {
         return sendValidationError(reply, error);
     }
@@ -167,8 +176,14 @@ exports.createDepartment = async (req, reply) => {
 
     try {
         const res = await db.query(
-            'INSERT INTO departments (location_id, name, email) VALUES ($1, $2, $3) RETURNING *',
-            [locationId, name, email || null]
+            `INSERT INTO departments (
+                location_id,
+                name,
+                email,
+                weekly_reminder_enabled,
+                weekly_reminder_email
+            ) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [locationId, name, email || null, weeklyReminderEnabled, weeklyReminderEmail]
         );
         return res.rows[0];
     } catch (error) {
@@ -184,12 +199,20 @@ exports.updateDepartment = async (req, reply) => {
     let name;
     let locationId;
     let email;
+    let weeklyReminderEnabled;
+    let weeklyReminderEmail;
     try {
         const body = ensureObject(req.body, 'department');
         id = ensurePositiveInteger(req.params.id, 'id');
         name = ensureString(body.name, 'name', { maxLength: 160 });
         locationId = ensurePositiveInteger(body.location_id, 'location_id');
-        email = ensureEmail(body.email, 'email', { required: false });
+        email = body.email === '' || body.email === undefined || body.email === null
+            ? null
+            : ensureEmail(body.email, 'email', { required: false });
+        weeklyReminderEnabled = ensureBoolean(body.weekly_reminder_enabled, 'weekly_reminder_enabled', { defaultValue: false });
+        weeklyReminderEmail = body.weekly_reminder_email === '' || body.weekly_reminder_email === undefined || body.weekly_reminder_email === null
+            ? null
+            : ensureEmail(body.weekly_reminder_email, 'weekly_reminder_email', { required: false });
     } catch (error) {
         return sendValidationError(reply, error);
     }
@@ -202,8 +225,15 @@ exports.updateDepartment = async (req, reply) => {
 
     try {
         const res = await db.query(
-            'UPDATE departments SET name = $1, location_id = $2, email = $3 WHERE id = $4 RETURNING *',
-            [name, locationId, email || null, id]
+            `UPDATE departments
+             SET name = $1,
+                 location_id = $2,
+                 email = $3,
+                 weekly_reminder_enabled = $4,
+                 weekly_reminder_email = $5
+             WHERE id = $6
+             RETURNING *`,
+            [name, locationId, email || null, weeklyReminderEnabled, weeklyReminderEmail, id]
         );
         return res.rows[0];
     } catch (error) {
