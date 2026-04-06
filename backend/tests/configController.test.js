@@ -147,8 +147,18 @@ test('getLocations deriva sedes para admin limitado con areas asignadas', async 
             assert.equal(params[0], 24);
             return {
                 rows: [
-                    { id: 3, name: 'Cariñena' },
+                    { id: 3, name: 'Carinena' },
                     { id: 4, name: 'Almacen' },
+                ],
+            };
+        }
+
+        if (sql.startsWith('SELECT d.location_id AS scope_id, COUNT(*)::int AS weekly_task_count')) {
+            assert.match(params[0], /^\d{4}-\d{2}-\d{2}$/);
+            assert.deepEqual(params[1], [3, 4]);
+            return {
+                rows: [
+                    { scope_id: 3, weekly_task_count: 5 },
                 ],
             };
         }
@@ -165,7 +175,9 @@ test('getLocations deriva sedes para admin limitado con areas asignadas', async 
         }, createReply());
 
         assert.equal(result.length, 2);
-        assert.equal(result[0].name, 'Cariñena');
+        assert.equal(result[0].name, 'Carinena');
+        assert.equal(result[0].weekly_task_count, 5);
+        assert.equal(result[1].weekly_task_count, 0);
         assert.equal(client.wasReleased(), true);
     } finally {
         db.connect = originalConnect;

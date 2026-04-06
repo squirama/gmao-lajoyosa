@@ -332,6 +332,198 @@ select:focus {
     padding: 10px 0 4px;
 }
 
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.admin-stat-card {
+    min-height: 108px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.admin-stat-card--warning {
+    border-color: rgba(230, 126, 34, 0.45);
+}
+
+.admin-stat-card--danger {
+    border-color: rgba(192, 57, 43, 0.5);
+}
+
+.admin-stat-label {
+    color: #aeb9c4;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+}
+
+.admin-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 8px;
+    color: #eef2f5;
+}
+
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+}
+
+.admin-badge--success {
+    background: rgba(39, 174, 96, 0.16);
+    color: #7ce0a9;
+    border-color: rgba(39, 174, 96, 0.35);
+}
+
+.admin-badge--warn {
+    background: rgba(230, 126, 34, 0.14);
+    color: #f2b56a;
+    border-color: rgba(230, 126, 34, 0.35);
+}
+
+.admin-badge--danger {
+    background: rgba(192, 57, 43, 0.16);
+    color: #f1958d;
+    border-color: rgba(192, 57, 43, 0.35);
+}
+
+.admin-badge--neutral {
+    background: rgba(93, 109, 126, 0.18);
+    color: #d1d8df;
+    border-color: rgba(93, 109, 126, 0.35);
+}
+
+.admin-provider-pickers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.admin-provider-picker {
+    background: rgba(20, 29, 36, 0.6);
+    border: 1px solid #34424f;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.admin-provider-checklist {
+    max-height: 220px;
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.admin-provider-check {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    color: #eef2f5;
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.admin-provider-check input {
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+}
+
+.admin-provider-check__text {
+    min-width: 0;
+    word-break: break-word;
+}
+
+.admin-provider-card {
+    border: 1px solid #34424f;
+    border-radius: 12px;
+    background: rgba(20, 29, 36, 0.92);
+    padding: 16px;
+}
+
+.admin-provider-card__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.admin-provider-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.admin-provider-card__meta {
+    margin-top: 10px;
+    display: grid;
+    gap: 6px;
+    color: #c5d0da;
+}
+
+.admin-provider-documents {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #34424f;
+    display: grid;
+    gap: 18px;
+}
+
+.admin-provider-documents__form,
+.admin-provider-documents__list {
+    background: rgba(17, 24, 30, 0.72);
+    border: 1px solid #34424f;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.admin-provider-documents__form h3,
+.admin-provider-documents__list h3 {
+    margin-top: 0;
+    margin-bottom: 14px;
+    color: #f39c12;
+}
+
+.admin-provider-document-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(52, 66, 79, 0.55);
+}
+
+.admin-provider-document-row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.admin-provider-file-input {
+    width: 100%;
+    max-width: 100%;
+    background: #2c3e50;
+    border: 1px solid #435364;
+    color: white;
+    padding: 12px;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
 @media (max-width: 900px) {
     .admin-summary-row {
         flex-direction: column;
@@ -347,6 +539,19 @@ select:focus {
 
     .admin-inline-input {
         width: 100%;
+    }
+
+    .admin-provider-pickers {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-provider-card__top,
+    .admin-provider-document-row {
+        flex-direction: column;
+    }
+
+    .admin-provider-badges {
+        justify-content: flex-start;
     }
 }
 

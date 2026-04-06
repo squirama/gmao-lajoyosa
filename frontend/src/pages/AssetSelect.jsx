@@ -40,7 +40,15 @@ export default function AssetSelect({ context, setContext }) {
             <h1 className="title">Seleccione Maquina</h1>
             <div className="grid-menu">
                 {assets.map((asset) => (
-                    <button key={asset.id} className="btn-large" onClick={() => handleSelect(asset)}>
+                    <button
+                        key={asset.id}
+                        className="btn-large btn-large--with-badge"
+                        onClick={() => handleSelect(asset)}
+                        title={`Tareas esta semana: ${asset.weekly_task_count || 0}`}
+                    >
+                        {(asset.weekly_task_count || 0) > 0 && (
+                            <span className="task-badge">{asset.weekly_task_count}</span>
+                        )}
                         <div>
                             <div style={{ fontWeight: 'bold' }}>{asset.name}</div>
                             <div style={{ fontSize: '0.8em' }}>{asset.brand} {asset.model}</div>

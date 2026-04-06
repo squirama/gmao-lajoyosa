@@ -1,7 +1,70 @@
+function formatDateOnly(value) {
+    const date = new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekEnd() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const day = today.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(monday.getDate() + mondayOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    return formatDateOnly(sunday);
+}
+
+async function attachWeeklyTaskCounts(client, rows, type) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return rows;
+    }
+
+    const ids = rows.map((row) => Number(row.id)).filter(Boolean);
+    if (ids.length === 0) {
+        return rows;
+    }
+
+    const weekEnd = getCurrentWeekEnd();
+    let groupColumn = '';
+
+    if (type === 'locations') {
+        groupColumn = 'd.location_id';
+    } else if (type === 'departments') {
+        groupColumn = 'a.dept_id';
+    } else if (type === 'assets') {
+        groupColumn = 'mp.asset_id';
+    } else {
+        return rows;
+    }
+
+    const res = await client.query(
+        `SELECT ${groupColumn} AS scope_id, COUNT(*)::int AS weekly_task_count
+         FROM maintenance_plans mp
+         JOIN assets a ON mp.asset_id = a.id
+         LEFT JOIN departments d ON a.dept_id = d.id
+         WHERE mp.active = true
+           AND mp.next_due_date IS NOT NULL
+           AND mp.next_due_date <= $1
+           AND ${groupColumn} = ANY($2::int[])
+         GROUP BY ${groupColumn}`,
+        [weekEnd, ids]
+    );
+
+    const counts = new Map(res.rows.map((row) => [Number(row.scope_id), Number(row.weekly_task_count || 0)]));
+    return rows.map((row) => ({
+        ...row,
+        weekly_task_count: counts.get(Number(row.id)) || 0,
+    }));
+}
+
 async function fetchLocations(client, access) {
     if (access.isSuperAdmin) {
         const res = await client.query('SELECT * FROM locations ORDER BY id');
-        return res.rows;
+        return attachWeeklyTaskCounts(client, res.rows, 'locations');
     }
 
     if (access.allowedDeptIds.length > 0) {
@@ -13,7 +76,7 @@ async function fetchLocations(client, access) {
             WHERE ud.user_id = $1
             ORDER BY l.id
         `, [access.user.id]);
-        return res.rows;
+        return attachWeeklyTaskCounts(client, res.rows, 'locations');
     }
 
     if (access.isAdmin && access.locationId) {
@@ -21,7 +84,7 @@ async function fetchLocations(client, access) {
             'SELECT * FROM locations WHERE id = $1 ORDER BY id',
             [access.locationId]
         );
-        return res.rows;
+        return attachWeeklyTaskCounts(client, res.rows, 'locations');
     }
 
     return [];
@@ -75,7 +138,7 @@ async function fetchDepartments(client, access, { locationId = null } = {}) {
         `SELECT * FROM departments ${whereClause} ORDER BY name`,
         params
     );
-    return res.rows;
+    return attachWeeklyTaskCounts(client, res.rows, 'departments');
 }
 
 async function fetchAssets(client, access, { departmentId = null, locationId = null } = {}) {
@@ -110,7 +173,7 @@ async function fetchAssets(client, access, { departmentId = null, locationId = n
         WHERE ${filters.join(' AND ')}
         ORDER BY a.name
     `, params);
-    return res.rows;
+    return attachWeeklyTaskCounts(client, res.rows, 'assets');
 }
 
 async function fetchPlans(client, access, { assetId = null, departmentId = null, locationId = null } = {}) {

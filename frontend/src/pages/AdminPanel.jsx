@@ -12,6 +12,7 @@ import AdminHistorySection from '../components/admin/AdminHistorySection';
 import AdminLegalSection from '../components/admin/AdminLegalSection';
 import AdminLocationsSection from '../components/admin/AdminLocationsSection';
 import AdminPlansSection from '../components/admin/AdminPlansSection';
+import AdminProvidersSection from '../components/admin/AdminProvidersSection';
 import AdminReportsSection from '../components/admin/AdminReportsSection';
 import AdminUsersSection from '../components/admin/AdminUsersSection';
 import LegalHistoryModal from '../components/admin/LegalHistoryModal';
@@ -24,6 +25,7 @@ import { useAdminReports } from '../hooks/useAdminReports';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminHistory } from '../hooks/useAdminHistory';
 import { useAdminActivity } from '../hooks/useAdminActivity';
+import { useAdminProviders } from '../hooks/useAdminProviders';
 import { toLocalDateInputValue } from '../utils/adminPanelUtils';
 
 const AdminScheduler = lazy(() => import('../pages/AdminScheduler'));
@@ -35,6 +37,7 @@ const ADMIN_SECTIONS = [
     'departments',
     'assets',
     'plans',
+    'providers',
     'inventory',
     'history',
     'activity',
@@ -49,6 +52,7 @@ const ADMIN_SECTION_LABELS = {
     departments: 'Areas',
     assets: 'Maquinas',
     plans: 'Planes',
+    providers: 'Proveedores',
     inventory: 'Inventario',
     history: 'Historial',
     activity: 'Actividad',
@@ -147,6 +151,22 @@ export default function AdminPanel() {
         recentLogins,
         refreshActivity,
     } = useAdminActivity(authHeader);
+    const {
+        deactivateProvider,
+        deleteProviderDocument,
+        editingProvider,
+        fetchProviderDocuments,
+        handleProviderSubmit,
+        providerDocuments,
+        providerForm,
+        providers,
+        providersError,
+        providersLoading,
+        resetProviderForm,
+        setProviderForm,
+        startEditingProvider,
+        uploadProviderDocument,
+    } = useAdminProviders(authHeader);
 
     const [loading, setLoading] = useState(false);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -312,6 +332,7 @@ export default function AdminPanel() {
                     <button onClick={() => goToAdminSection('departments')} className={`sidebar-btn ${activeTab === 'departments' ? 'active' : ''}`}>Areas</button>
                     <button onClick={() => goToAdminSection('assets')} className={`sidebar-btn ${activeTab === 'assets' ? 'active' : ''}`}>Maquinas</button>
                     <button onClick={() => goToAdminSection('plans')} className={`sidebar-btn ${activeTab === 'plans' ? 'active' : ''}`}>Planes</button>
+                    <button onClick={() => goToAdminSection('providers')} className={`sidebar-btn ${activeTab === 'providers' ? 'active' : ''}`}>Proveedores</button>
                     <button onClick={() => goToAdminSection('inventory')} className={`sidebar-btn ${activeTab === 'inventory' ? 'active' : ''}`}>Inventario</button>
                     <button onClick={() => goToAdminSection('history')} className={`sidebar-btn ${activeTab === 'history' ? 'active' : ''}`}>Historial</button>
                     <button onClick={() => goToAdminSection('activity')} className={`sidebar-btn ${activeTab === 'activity' ? 'active' : ''}`}>Actividad</button>
@@ -428,6 +449,27 @@ export default function AdminPanel() {
                             savePlanNotificationSettings={savePlanNotificationSettings}
                             setPlanForm={setPlanForm}
                             startEditingPlan={startEditingPlan}
+                        />
+                    )}
+                    {activeTab === 'providers' && (
+                        <AdminProvidersSection
+                            assets={config.assets || []}
+                            deactivateProvider={deactivateProvider}
+                            departments={config.departments || []}
+                            deleteProviderDocument={deleteProviderDocument}
+                            editingProvider={editingProvider}
+                            fetchProviderDocuments={fetchProviderDocuments}
+                            handleProviderSubmit={handleProviderSubmit}
+                            locations={config.locations || []}
+                            providerDocuments={providerDocuments}
+                            providerForm={providerForm}
+                            providers={providers}
+                            providersError={providersError}
+                            providersLoading={providersLoading}
+                            resetProviderForm={resetProviderForm}
+                            setProviderForm={setProviderForm}
+                            startEditingProvider={startEditingProvider}
+                            uploadProviderDocument={uploadProviderDocument}
                         />
                     )}
                     {/* F. OPERARIOS (USERS) */}

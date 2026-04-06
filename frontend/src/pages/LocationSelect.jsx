@@ -81,8 +81,16 @@ export default function LocationSelect({ setContext }) {
                 )}
 
                 {!loading && !error && locations.map((loc) => (
-                    <button key={loc.id} className="btn-large" onClick={() => handleSelect(loc)}>
-                        {loc.name}
+                    <button
+                        key={loc.id}
+                        className="btn-large btn-large--with-badge"
+                        onClick={() => handleSelect(loc)}
+                        title={`Tareas esta semana: ${loc.weekly_task_count || 0}`}
+                    >
+                        {(loc.weekly_task_count || 0) > 0 && (
+                            <span className="task-badge">{loc.weekly_task_count}</span>
+                        )}
+                        <span>{loc.name}</span>
                     </button>
                 ))}
             </div>

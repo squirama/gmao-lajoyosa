@@ -5,6 +5,8 @@ const UserController = require('../controllers/UserController');
 const LogController = require('../controllers/LogController');
 const ConfigController = require('../controllers/ConfigController');
 const HistoryController = require('../controllers/HistoryController');
+const ActivityController = require('../controllers/ActivityController');
+const ProviderController = require('../controllers/ProviderController');
 
 async function routes(fastify, options) {
 
@@ -61,6 +63,14 @@ async function routes(fastify, options) {
     fastify.post('/requests', RequestController.createRequest);
     fastify.get('/admin/requests', RequestController.getAllRequests);
     fastify.get('/admin/history', HistoryController.getMaintenanceHistory);
+    fastify.get('/admin/activity', ActivityController.getOverview);
+    fastify.get('/admin/providers', ProviderController.getProviders);
+    fastify.post('/admin/providers', ProviderController.createProvider);
+    fastify.put('/admin/providers/:id', ProviderController.updateProvider);
+    fastify.delete('/admin/providers/:id', ProviderController.deleteProvider);
+    fastify.get('/admin/providers/:id/documents', ProviderController.getProviderDocuments);
+    fastify.post('/admin/providers/:id/documents', ProviderController.uploadProviderDocument);
+    fastify.delete('/admin/provider-documents/:id', ProviderController.deleteProviderDocument);
 
     // --- Maintenance Plans ---
     fastify.post('/admin/plans', PlanController.createPlan);

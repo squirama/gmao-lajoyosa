@@ -40,8 +40,16 @@ export default function DepartmentSelect({ context, setContext }) {
             <h1 className="title">Seleccione Area</h1>
             <div className="grid-menu">
                 {depts.map((dept) => (
-                    <button key={dept.id} className="btn-large" onClick={() => handleSelect(dept)}>
-                        {dept.name}
+                    <button
+                        key={dept.id}
+                        className="btn-large btn-large--with-badge"
+                        onClick={() => handleSelect(dept)}
+                        title={`Tareas esta semana: ${dept.weekly_task_count || 0}`}
+                    >
+                        {(dept.weekly_task_count || 0) > 0 && (
+                            <span className="task-badge">{dept.weekly_task_count}</span>
+                        )}
+                        <span>{dept.name}</span>
                     </button>
                 ))}
             </div>
