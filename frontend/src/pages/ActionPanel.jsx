@@ -5,6 +5,25 @@ import Clock from '../components/Clock';
 // import '../styles/main.css'; // Comenta esto si no tienes el archivo, o déjalo si existe.
 
 export default function ActionPanel({ context }) {
+    const DOCUMENTARY_STEP_TYPES = {
+        CHECK: 'CHECK',
+        TEXT: 'TEXT',
+        LONG_TEXT: 'LONG_TEXT',
+        NUMBER: 'NUMBER',
+        DATE: 'DATE',
+    };
+    const ISO_CLASSIFICATIONS = [
+        { value: 'CORRECTION', label: 'Correccion puntual' },
+        { value: 'CORRECTIVE_ACTION', label: 'Accion correctiva' },
+        { value: 'IMPROVEMENT_OPPORTUNITY', label: 'Oportunidad de mejora' },
+        { value: 'TECHNICAL_CHANGE', label: 'Cambio tecnico realizado' },
+    ];
+    const ISO_IMPACTS = [
+        { value: 'NONE', label: 'Sin impacto' },
+        { value: 'POTENTIAL', label: 'Impacto potencial' },
+        { value: 'CONFIRMED', label: 'Impacto confirmado' },
+    ];
+
     const [availableTasks, setAvailableTasks] = useState([]);
     const [selectedTasks, setSelectedTasks] = useState({});
     const [users, setUsers] = useState([]);
@@ -22,6 +41,26 @@ export default function ActionPanel({ context }) {
     const [inventorySearch, setInventorySearch] = useState("");
     const [selectedPartId, setSelectedPartId] = useState("");
     const [selectedPartQty, setSelectedPartQty] = useState(1);
+    const [openPlanDocuments, setOpenPlanDocuments] = useState({});
+    const [improvementMeta, setImprovementMeta] = useState({
+        classification: 'CORRECTION',
+        impact_level: 'NONE',
+        probable_cause: '',
+        preventive_action: '',
+        follow_up_required: false,
+    });
+    const normalizedSolution = String(solution || '').trim();
+    const requiresOpenFollowUp = improvementMeta.follow_up_required || normalizedSolution.length === 0;
+
+    const resolvePlanDocumentLabel = (document) => {
+        if (document?.document_name) return document.document_name;
+        if (document?.document_type) return document.document_type;
+        if (document?.document_path) {
+            const segments = String(document.document_path).split('/');
+            return segments[segments.length - 1] || 'VER DOCUMENTO';
+        }
+        return 'VER DOCUMENTO';
+    };
 
     const navigate = useNavigate();
 
@@ -57,6 +96,22 @@ export default function ActionPanel({ context }) {
         setSelectedPartQty(1);
     };
 
+    const updateTaskState = (planId, updater) => {
+        setSelectedTasks((prev) => {
+            const current = prev[planId] || {
+                checked: false,
+                alert: false,
+                comment: '',
+                scheduledDate: null,
+                stepResponses: {},
+            };
+            return {
+                ...prev,
+                [planId]: updater(current),
+            };
+        });
+    };
+
     useEffect(() => {
         if (!context.asset) {
             navigate('/asset');
@@ -86,29 +141,92 @@ export default function ActionPanel({ context }) {
 
     // Handle Checkbox Toggle
     const toggleTask = (planId, scheduledDate = null) => {
-        setSelectedTasks(prev => {
-            const current = prev[planId] || { checked: false, alert: false, comment: '', scheduledDate: null };
-            return {
-                ...prev,
-                [planId]: {
-                    ...current,
-                    checked: !current.checked,
-                    scheduledDate: scheduledDate || current.scheduledDate || null,
-                }
-            };
-        });
+        updateTaskState(planId, (current) => ({
+            ...current,
+            checked: !current.checked,
+            scheduledDate: scheduledDate || current.scheduledDate || null,
+            stepResponses: current.stepResponses || {},
+        }));
     };
 
     // Handle Alert Toggle
     const toggleAlert = (planId, e) => {
         e.stopPropagation();
-        setSelectedTasks(prev => {
-            const current = prev[planId] || { checked: false, alert: false, comment: '', scheduledDate: null };
-            return {
-                ...prev,
-                [planId]: { ...current, alert: !current.alert, checked: true }
-            };
-        });
+        updateTaskState(planId, (current) => ({
+            ...current,
+            alert: !current.alert,
+            checked: true,
+            stepResponses: current.stepResponses || {},
+        }));
+    };
+
+    const updateDocumentaryResponse = (planId, stepId, value) => {
+        updateTaskState(planId, (current) => ({
+            ...current,
+            stepResponses: {
+                ...(current.stepResponses || {}),
+                [stepId]: value,
+            },
+        }));
+    };
+
+    const isDocumentaryValueFilled = (step, value) => {
+        if (!step?.required) return true;
+        if (step.step_type === DOCUMENTARY_STEP_TYPES.CHECK) {
+            return value === true || value === false;
+        }
+        if (step.step_type === DOCUMENTARY_STEP_TYPES.NUMBER) {
+            return value !== '' && value !== null && value !== undefined && !Number.isNaN(Number(value));
+        }
+        return value !== '' && value !== null && value !== undefined;
+    };
+
+    const renderDocumentaryStepInput = (plan, step, currentValue) => {
+        if (step.step_type === DOCUMENTARY_STEP_TYPES.CHECK) {
+            return (
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <label className="admin-toggle" style={{ margin: 0 }}>
+                        <input
+                            type="radio"
+                            name={`doc-step-${plan.id}-${step.id}`}
+                            checked={currentValue === true}
+                            onChange={() => updateDocumentaryResponse(plan.id, step.id, true)}
+                        />
+                        <span className="hmi-label">SI</span>
+                    </label>
+                    <label className="admin-toggle" style={{ margin: 0 }}>
+                        <input
+                            type="radio"
+                            name={`doc-step-${plan.id}-${step.id}`}
+                            checked={currentValue === false}
+                            onChange={() => updateDocumentaryResponse(plan.id, step.id, false)}
+                        />
+                        <span className="hmi-label">NO</span>
+                    </label>
+                </div>
+            );
+        }
+
+        if (step.step_type === DOCUMENTARY_STEP_TYPES.LONG_TEXT) {
+            return (
+                <textarea
+                    className="hmi-textarea"
+                    style={{ marginTop: '8px', height: '80px' }}
+                    value={currentValue || ''}
+                    onChange={(e) => updateDocumentaryResponse(plan.id, step.id, e.target.value)}
+                />
+            );
+        }
+
+        return (
+            <input
+                type={step.step_type === DOCUMENTARY_STEP_TYPES.NUMBER ? 'number' : step.step_type === DOCUMENTARY_STEP_TYPES.DATE ? 'date' : 'text'}
+                className="operator-select"
+                style={{ width: '100%', marginTop: '8px' }}
+                value={currentValue ?? ''}
+                onChange={(e) => updateDocumentaryResponse(plan.id, step.id, e.target.value)}
+            />
+        );
     };
 
     const handleSubmit = async (isGeneralBreakdown = false) => {
@@ -121,6 +239,7 @@ export default function ActionPanel({ context }) {
             .filter(([_, val]) => val.checked)
             .map(([id, val]) => {
                 const plan = availableTasks.find(p => p.id === parseInt(id));
+                const planSteps = Array.isArray(plan?.document_steps) ? plan.document_steps : [];
                 return {
                     plan_id: plan ? plan.id : null,
                     description: plan ? plan.task_description : "Tarea Desconocida",
@@ -128,6 +247,12 @@ export default function ActionPanel({ context }) {
                     alert: val.alert,
                     comment: val.comment,
                     scheduled_date: val.scheduledDate || null,
+                    step_responses: planSteps
+                        .map((step) => ({
+                            step_id: step.id,
+                            value: (val.stepResponses || {})[step.id],
+                        }))
+                        .filter((response) => response.value !== undefined),
                 };
             });
 
@@ -139,6 +264,21 @@ export default function ActionPanel({ context }) {
         if (isGeneralBreakdown && !globalComment) {
             alert("⚠️ Para 'AVERÍA O CORRECTIVO', debe escribir un comentario global.");
             return;
+        }
+
+        for (const task of validTasks) {
+            const plan = availableTasks.find((item) => item.id === task.plan_id);
+            if (!plan?.is_documentary) continue;
+
+            const missingStep = (Array.isArray(plan.document_steps) ? plan.document_steps : []).find((step) => {
+                const value = (selectedTasks[plan.id]?.stepResponses || {})[step.id];
+                return !isDocumentaryValueFilled(step, value);
+            });
+
+            if (missingStep) {
+                alert(`Complete el paso obligatorio "${missingStep.title}" antes de guardar.`);
+                return;
+            }
         }
 
         if (!window.confirm("¿CONFIRMAR REGISTRO?")) return;
@@ -188,8 +328,13 @@ export default function ActionPanel({ context }) {
                     user_id: operator,
                     global_comment: globalComment,
                     duration_minutes: parseInt(duration), // Send duration for general breakdown too
-                    solution: solution, // <--- ADDED THIS LINE
+                    solution: solution,
                     document_path: documentPath,
+                    classification: improvementMeta.classification,
+                    impact_level: improvementMeta.impact_level,
+                    probable_cause: improvementMeta.probable_cause,
+                    preventive_action: improvementMeta.preventive_action,
+                    follow_up_required: requiresOpenFollowUp,
                     tasks: [{
                         description: "AVERÍA GENERAL / MANTENIMIENTO CORRECTIVO",
                         checked: true,
@@ -215,7 +360,8 @@ export default function ActionPanel({ context }) {
                         alert: task.alert,
                         scheduled_date: task.scheduled_date,
                         document_path: documentPath, // Guardar el archivo adjunto
-                        consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty }))
+                        consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty })),
+                        step_responses: task.step_responses,
                     });
                 } else {
                     // Legacy/Ad-hoc task logging if any (though we filtered by plan_id usually)
@@ -280,6 +426,14 @@ export default function ActionPanel({ context }) {
         } else {
             window.confirm(`Esta alerta es para la máquina: ${alert.asset_name}. ¿Desea cambiar de máquina?`);
         }
+    };
+
+    const togglePlanDocuments = (planId, event) => {
+        event.stopPropagation();
+        setOpenPlanDocuments((current) => ({
+            ...current,
+            [planId]: !current[planId],
+        }));
     };
 
     return (
@@ -389,7 +543,7 @@ export default function ActionPanel({ context }) {
                         <p style={{ color: '#666', textAlign: 'center' }}>No hay tareas planificadas para este activo.</p>
                     ) : (
                         availableTasks.map(plan => {
-                            const state = selectedTasks[plan.id] || { checked: false, alert: false };
+                            const state = selectedTasks[plan.id] || { checked: false, alert: false, stepResponses: {} };
 
                             // --- CÁLCULO DE FECHAS (SEMÁFORO) ---
                             // Solo mostramos fecha si tiene frecuencia y fecha próxima definida
@@ -421,12 +575,11 @@ export default function ActionPanel({ context }) {
 
                             return (
                                 <div key={plan.id} className="action-panel-task-row" style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
                                     padding: '10px',
                                     borderBottom: '1px solid #222',
                                     background: state.checked ? '#0a2a0a' : 'transparent'
                                 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
                                     {/* Checkbox */}
                                     <input
                                         type="checkbox"
@@ -441,9 +594,37 @@ export default function ActionPanel({ context }) {
                                         color: state.checked ? 'white' : '#aaa',
                                         fontSize: '1.1rem',
                                         display: 'flex',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        flexWrap: 'wrap',
+                                        gap: '10px'
                                     }}>
-                                        {plan.task_description}
+                                        <span>{plan.task_description}</span>
+
+                                        {plan.is_documentary && (
+                                            <span style={{
+                                                color: 'var(--neon-purple)',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.75rem',
+                                                background: 'rgba(128, 0, 128, 0.12)',
+                                                padding: '2px 8px',
+                                                borderRadius: '999px'
+                                            }}>
+                                                PLAN DOCUMENTAL
+                                            </span>
+                                        )}
+
+                                        {plan.is_calibration && (
+                                            <span style={{
+                                                color: '#f97316',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.75rem',
+                                                background: 'rgba(249, 115, 22, 0.12)',
+                                                padding: '2px 8px',
+                                                borderRadius: '999px'
+                                            }}>
+                                                CALIBRACION
+                                            </span>
+                                        )}
 
                                         {/* Inyectamos la fecha aquí */}
                                         {isScheduled && (
@@ -451,13 +632,26 @@ export default function ActionPanel({ context }) {
                                                 color: dateColor,
                                                 fontWeight: 'bold',
                                                 fontSize: '0.8rem',
-                                                marginLeft: '15px',
                                                 background: '#222',
                                                 padding: '2px 8px',
                                                 borderRadius: '4px'
                                             }}>
                                                 {dateText}
                                             </span>
+                                        )}
+
+                                        {Array.isArray(plan.reference_documents) && plan.reference_documents.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => togglePlanDocuments(plan.id, e)}
+                                                className="action-panel-plan-doc-trigger"
+                                                title={`Documentos del plan: ${plan.reference_documents.length}`}
+                                                aria-label={`Ver documentos del plan ${plan.task_description}`}
+                                            >
+                                                <span className="action-panel-plan-doc-icon" aria-hidden="true">📄</span>
+                                                <span className="action-panel-plan-doc-label">DOC</span>
+                                                <span className="action-panel-plan-doc-count">{plan.reference_documents.length}</span>
+                                            </button>
                                         )}
                                     </span>
 
@@ -477,6 +671,49 @@ export default function ActionPanel({ context }) {
                                     >
                                         {state.alert ? '🔔' : '🔕'}
                                     </button>
+                                    </div>
+
+                                    {Array.isArray(plan.reference_documents) && plan.reference_documents.length > 0 && openPlanDocuments[plan.id] && (
+                                        <div className="action-panel-plan-documents">
+                                            {plan.reference_documents.map((document) => (
+                                                <a
+                                                    key={`plan-doc-${plan.id}-${document.id}`}
+                                                    className="btn-manual action-panel-plan-document-link"
+                                                    href={document.document_path}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                >
+                                                    {resolvePlanDocumentLabel(document)}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {state.checked && plan.is_documentary && Array.isArray(plan.document_steps) && plan.document_steps.length > 0 && (
+                                        <div style={{
+                                            marginTop: '12px',
+                                            padding: '12px',
+                                            border: '1px solid rgba(128, 0, 128, 0.35)',
+                                            borderRadius: '8px',
+                                            background: 'rgba(128, 0, 128, 0.06)'
+                                        }}>
+                                            <div style={{ color: 'var(--neon-purple)', fontWeight: 'bold', marginBottom: '10px' }}>
+                                                Checklist del plan
+                                            </div>
+                                            {plan.document_steps.map((step, stepIndex) => {
+                                                const currentValue = (state.stepResponses || {})[step.id];
+                                                const missingRequired = !isDocumentaryValueFilled(step, currentValue);
+                                                return (
+                                                    <div key={`task-step-${plan.id}-${step.id}`} style={{ marginBottom: '14px' }}>
+                                                        <label className="hmi-label" style={{ color: missingRequired ? '#fca5a5' : '#ddd' }}>
+                                                            {stepIndex + 1}. {step.title}{step.required ? ' *' : ''}
+                                                        </label>
+                                                        {renderDocumentaryStepInput(plan, step, currentValue)}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })
@@ -550,6 +787,73 @@ export default function ActionPanel({ context }) {
                                     {uploadFiles.length} archivos seleccionados: {uploadFiles.map(f => f.name).join(', ')}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="action-panel-details action-panel-section-card" style={{ borderTop: '1px solid #333', paddingTop: '20px', marginTop: '20px' }}>
+                    <label className="hmi-label" style={{ color: 'var(--neon-cyan)' }}>
+                        EVALUACION ISO / MEJORA (AVERIA O CORRECTIVO):
+                    </label>
+                    <div style={{ color: requiresOpenFollowUp ? '#fca5a5' : '#9ae6b4', marginTop: '10px', fontSize: '0.95rem' }}>
+                        {requiresOpenFollowUp
+                            ? 'Si no indicas solucion, la averia quedara abierta en Admin > Correctivos hasta que alguien la cierre.'
+                            : 'Con solucion indicada y sin seguimiento manual, el registro quedara cerrado al guardar.'}
+                    </div>
+                    <div className="admin-form-grid" style={{ marginTop: '12px' }}>
+                        <div>
+                            <label className="hmi-label">Tipo de cierre</label>
+                            <select
+                                className="operator-select admin-field"
+                                value={improvementMeta.classification}
+                                onChange={e => setImprovementMeta(current => ({ ...current, classification: e.target.value }))}
+                            >
+                                {ISO_CLASSIFICATIONS.map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="hmi-label">Impacto inocuidad / calidad</label>
+                            <select
+                                className="operator-select admin-field"
+                                value={improvementMeta.impact_level}
+                                onChange={e => setImprovementMeta(current => ({ ...current, impact_level: e.target.value }))}
+                            >
+                                {ISO_IMPACTS.map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="admin-field--full">
+                            <label className="hmi-label">Causa probable</label>
+                            <textarea
+                                className="hmi-textarea"
+                                placeholder="Que ha originado la averia o que debilidad se ha detectado..."
+                                value={improvementMeta.probable_cause}
+                                onChange={e => setImprovementMeta(current => ({ ...current, probable_cause: e.target.value }))}
+                                style={{ height: '80px' }}
+                            />
+                        </div>
+                        <div className="admin-field--full">
+                            <label className="hmi-label">Medida preventiva / mejora</label>
+                            <textarea
+                                className="hmi-textarea"
+                                placeholder="Que accion ayuda a evitar recurrencia o que mejora se propone..."
+                                value={improvementMeta.preventive_action}
+                                onChange={e => setImprovementMeta(current => ({ ...current, preventive_action: e.target.value }))}
+                                style={{ height: '80px' }}
+                            />
+                        </div>
+                        <div className="admin-field--full">
+                            <label className="admin-toggle">
+                                <input
+                                    type="checkbox"
+                                    checked={improvementMeta.follow_up_required}
+                                    onChange={e => setImprovementMeta(current => ({ ...current, follow_up_required: e.target.checked }))}
+                                />
+                                <span>Dejar abierta para seguimiento posterior</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -628,7 +932,7 @@ export default function ActionPanel({ context }) {
                         onClick={() => handleSubmit(true)}
                         disabled={loading}
                     >
-                        REGISTRAR AVERIA GENERAL O CORRECTIVO REALIZADO
+                        REGISTRAR AVERIA / CORRECTIVO
                     </button>
                 </div>
 

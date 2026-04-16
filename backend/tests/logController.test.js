@@ -21,8 +21,12 @@ test('createLog guarda document_path en intervention_logs', async () => {
             return { rows: [] };
         }
 
-        if (sql.startsWith('INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution, document_path) VALUES')) {
+        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
             assert.equal(params[5], '["/documents/averia.pdf"]');
+            assert.equal(params[6], 'CORRECTION');
+            assert.equal(params[7], 'NONE');
+            assert.equal(params[10], false);
+            assert.equal(params[11], 'NOT_REQUIRED');
             return { rows: [{ id: 41 }] };
         }
 
@@ -92,7 +96,10 @@ test('createLog envia correo si hay comentario o solucion aunque no haya campana
             return { rows: [] };
         }
 
-        if (sql.startsWith('INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution, document_path) VALUES')) {
+        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
+            assert.equal(params[6], 'CORRECTION');
+            assert.equal(params[10], true);
+            assert.equal(params[11], 'OPEN');
             return { rows: [{ id: 52 }] };
         }
 

@@ -20,6 +20,7 @@ describe('Admin legal and modal flows', () => {
         const onManagePlan = vi.fn();
         const onOpenHistory = vi.fn();
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const in10Days = new Date(today);
         in10Days.setDate(in10Days.getDate() + 10);
         const in60Days = new Date(today);
@@ -43,8 +44,11 @@ describe('Admin legal and modal flows', () => {
         expect(screen.getByText('Vigente')).toBeInTheDocument();
         expect(screen.getByText('Proximo / Vence hoy')).toBeInTheDocument();
         expect(screen.getByText('CADUCADO')).toBeInTheDocument();
-        expect(screen.getByText('2', { selector: 'div' })).toBeInTheDocument();
-        expect(screen.getAllByText('1', { selector: 'div' })).toHaveLength(2);
+        expect(screen.getByText('Sin fecha / por horas')).toBeInTheDocument();
+        expect(screen.getByText('Vigente').previousSibling).toHaveTextContent('1');
+        expect(screen.getByText('Proximo / Vence hoy').previousSibling).toHaveTextContent('1');
+        expect(screen.getByText('CADUCADO').previousSibling).toHaveTextContent('1');
+        expect(screen.getByText('Sin fecha / por horas').previousSibling).toHaveTextContent('0');
         expect(screen.getByText('Extintores')).toBeInTheDocument();
         expect(screen.getByText('Calibracion')).toBeInTheDocument();
         expect(screen.getByText('Inspeccion OCA')).toBeInTheDocument();
@@ -58,6 +62,30 @@ describe('Admin legal and modal flows', () => {
 
         expect(onManagePlan).toHaveBeenCalled();
         expect(onOpenHistory).toHaveBeenCalled();
+    });
+
+    it('no marca en rojo los planes legales sin proxima fecha y los clasifica como seguimiento manual', () => {
+        render(
+            <AdminLegalSection
+                onManagePlan={vi.fn()}
+                onOpenHistory={vi.fn()}
+                plans={[
+                    {
+                        id: 9,
+                        is_legal: true,
+                        task_description: 'Compresor bodega care',
+                        asset_name: 'Compresor 1',
+                        next_due_date: null,
+                        last_performed: '2026-04-10T00:00:00Z',
+                    },
+                ]}
+            />
+        );
+
+        expect(screen.getByText('Sin fecha / por horas').previousSibling).toHaveTextContent('1');
+        expect(screen.getByText('CADUCADO').previousSibling).toHaveTextContent('0');
+        expect(screen.getByText('Compresor bodega care')).toHaveStyle({ color: 'var(--neon-cyan)' });
+        expect(screen.getByText(/Ultimo registro: 2026-04-10 \| Seguimiento manual/i)).toBeInTheDocument();
     });
 
     it('muestra el calendario del activo y permite cerrarlo', async () => {

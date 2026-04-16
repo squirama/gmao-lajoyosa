@@ -3,15 +3,59 @@ const { sendEmail } = require('../services/emailService');
 const { processPartConsumptions } = require('../utils/inventory_helper');
 
 exports.createLog = async (req, reply) => {
-    const { asset_id, user_id, global_comment, tasks, solution, consumed_parts, document_path } = req.body;
+    const {
+        asset_id,
+        user_id,
+        global_comment,
+        tasks,
+        solution,
+        consumed_parts,
+        document_path,
+        classification = 'CORRECTION',
+        impact_level = 'NONE',
+        probable_cause = null,
+        preventive_action = null,
+        follow_up_required = false,
+    } = req.body;
     const client = await db.connect();
 
     try {
         await client.query('BEGIN');
 
+        const normalizedSolution = typeof solution === 'string' ? solution.trim() : '';
+        const requiresFollowUp = Boolean(follow_up_required || !normalizedSolution);
+        const followUpStatus = requiresFollowUp ? 'OPEN' : 'NOT_REQUIRED';
+
         const logRes = await client.query(
-            `INSERT INTO intervention_logs (asset_id, user_id, global_comment, duration_minutes, solution, document_path) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-            [asset_id, user_id, global_comment, req.body.duration_minutes || 0, solution || null, document_path || null]
+            `INSERT INTO intervention_logs (
+                asset_id,
+                user_id,
+                global_comment,
+                duration_minutes,
+                solution,
+                document_path,
+                classification,
+                impact_level,
+                probable_cause,
+                preventive_action,
+                follow_up_required,
+                follow_up_status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id`,
+            [
+                asset_id,
+                user_id,
+                global_comment,
+                req.body.duration_minutes || 0,
+                normalizedSolution || null,
+                document_path || null,
+                classification,
+                impact_level,
+                probable_cause || null,
+                preventive_action || null,
+                requiresFollowUp,
+                followUpStatus,
+            ]
         );
         const logId = logRes.rows[0].id;
 
@@ -47,7 +91,7 @@ exports.createLog = async (req, reply) => {
 
         const notifyEmail = process.env.NOTIFICATION_EMAIL || 'mantenimiento@bodegascare.com';
         const hasGlobalComment = Boolean(global_comment && String(global_comment).trim());
-        const hasSolution = Boolean(solution && String(solution).trim());
+        const hasSolution = Boolean(normalizedSolution);
         const shouldNotify = alertTasks.length > 0 || hasGlobalComment || hasSolution;
 
         if (shouldNotify) {
@@ -76,6 +120,14 @@ exports.createLog = async (req, reply) => {
                 ? `<ul>${alertTasks.map((task) => `<li><strong>${task.description}</strong>: ${task.comment || 'N/A'}</li>`).join('')}</ul>`
                 : '<p>Sin tareas marcadas con campana.</p>';
 
+            const isoHtml = `
+                <p><strong>Clasificacion:</strong> ${classification}</p>
+                <p><strong>Impacto inocuidad/calidad:</strong> ${impact_level}</p>
+                <p><strong>Causa probable:</strong><br>${probable_cause || 'No indicada'}</p>
+                <p><strong>Medida preventiva / mejora:</strong><br>${preventive_action || 'No indicada'}</p>
+                <p><strong>Requiere seguimiento:</strong> ${requiresFollowUp ? 'Si' : 'No'}</p>
+            `;
+
             try {
                 await sendEmail({
                     senderName: 'GMAO Alert',
@@ -89,7 +141,9 @@ exports.createLog = async (req, reply) => {
                         ${taskListHtml}
                         <hr>
                         <p><strong>Problema / Comentario Global:</strong><br>${global_comment || 'Sin comentarios'}</p>
-                        <p><strong>Solucion aplicada:</strong><br>${solution || 'No registrada'}</p>
+                        <p><strong>Solucion aplicada:</strong><br>${normalizedSolution || 'No registrada'}</p>
+                        <hr>
+                        ${isoHtml}
                     `,
                 });
                 console.log(`Alert email sent to ${targetEmail}`);

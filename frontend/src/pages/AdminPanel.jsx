@@ -8,6 +8,7 @@ import AdminActivitySection from '../components/admin/AdminActivitySection';
 import AdminAssetsSection from '../components/admin/AdminAssetsSection';
 import AdminDepartmentsSection from '../components/admin/AdminDepartmentsSection';
 import AdminErrorBoundary from '../components/admin/AdminErrorBoundary';
+import AdminCorrectiveActionsSection from '../components/admin/AdminCorrectiveActionsSection';
 import AdminHistorySection from '../components/admin/AdminHistorySection';
 import AdminLegalSection from '../components/admin/AdminLegalSection';
 import AdminLocationsSection from '../components/admin/AdminLocationsSection';
@@ -25,6 +26,7 @@ import { useAdminReports } from '../hooks/useAdminReports';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminHistory } from '../hooks/useAdminHistory';
 import { useAdminActivity } from '../hooks/useAdminActivity';
+import { useAdminCorrectiveActions } from '../hooks/useAdminCorrectiveActions';
 import { useAdminProviders } from '../hooks/useAdminProviders';
 import { toLocalDateInputValue } from '../utils/adminPanelUtils';
 
@@ -40,6 +42,7 @@ const ADMIN_SECTIONS = [
     'providers',
     'inventory',
     'history',
+    'improvements',
     'activity',
     'legal',
     'users',
@@ -55,6 +58,7 @@ const ADMIN_SECTION_LABELS = {
     providers: 'Proveedores',
     inventory: 'Inventario',
     history: 'Historial',
+    improvements: 'Correctivos',
     activity: 'Actividad',
     legal: 'Normativa',
     users: 'Operarios',
@@ -102,17 +106,21 @@ export default function AdminPanel() {
     } = useAdminLocationsDepartments(authHeader, refreshConfig);
     const { closeHistory, fetchHistory, historyData, historyPlan, openHistory } = usePlanHistory(authHeader);
     const {
+        deletePlanDocument,
         deletePlan,
         editingPlan,
+        fetchPlanDocuments,
         handlePlanSubmit,
         handleReschedule,
         handleSkip,
+        planDocuments,
         planForm,
         resetPlanForm,
         saveDepartmentReminderSettings,
         savePlanNotificationSettings,
         setPlanForm,
         startEditingPlan,
+        uploadPlanDocument,
     } = useAdminPlans(authHeader, refreshConfig);
     const {
         editingUser,
@@ -142,6 +150,15 @@ export default function AdminPanel() {
         historyRows,
         setHistoryFilters,
     } = useAdminHistory(authHeader);
+    const {
+        correctiveError,
+        correctiveFilters,
+        correctiveLoading,
+        correctiveRows,
+        fetchCorrectiveActions,
+        setCorrectiveFilters,
+        updateCorrectiveAction,
+    } = useAdminCorrectiveActions(authHeader);
     const {
         activityError,
         activityLoading,
@@ -335,6 +352,7 @@ export default function AdminPanel() {
                     <button onClick={() => goToAdminSection('providers')} className={`sidebar-btn ${activeTab === 'providers' ? 'active' : ''}`}>Proveedores</button>
                     <button onClick={() => goToAdminSection('inventory')} className={`sidebar-btn ${activeTab === 'inventory' ? 'active' : ''}`}>Inventario</button>
                     <button onClick={() => goToAdminSection('history')} className={`sidebar-btn ${activeTab === 'history' ? 'active' : ''}`}>Historial</button>
+                    <button onClick={() => goToAdminSection('improvements')} className={`sidebar-btn ${activeTab === 'improvements' ? 'active' : ''}`}>Correctivos</button>
                     <button onClick={() => goToAdminSection('activity')} className={`sidebar-btn ${activeTab === 'activity' ? 'active' : ''}`}>Actividad</button>
                     <button onClick={() => goToAdminSection('legal')} className={`sidebar-btn ${activeTab === 'legal' ? 'active' : ''}`} style={{ color: 'var(--neon-orange)' }}>Normativa</button>
                     <button onClick={() => goToAdminSection('users')} className={`sidebar-btn ${activeTab === 'users' ? 'active' : ''}`}>Operarios</button>
@@ -435,13 +453,16 @@ export default function AdminPanel() {
                     {activeTab === 'plans' && (
                         <AdminPlansSection
                             assets={config.assets}
+                            deletePlanDocument={deletePlanDocument}
                             deletePlan={deletePlan}
                             departments={config.departments}
                             editingPlan={editingPlan}
+                            fetchPlanDocuments={fetchPlanDocuments}
                             handlePlanSubmit={handlePlanSubmit}
                             handleReschedule={handleReschedule}
                             handleSkip={handleSkip}
                             locations={config.locations}
+                            planDocuments={planDocuments}
                             planForm={planForm}
                             plans={config.plans}
                             resetPlanForm={resetPlanForm}
@@ -449,6 +470,7 @@ export default function AdminPanel() {
                             savePlanNotificationSettings={savePlanNotificationSettings}
                             setPlanForm={setPlanForm}
                             startEditingPlan={startEditingPlan}
+                            uploadPlanDocument={uploadPlanDocument}
                         />
                     )}
                     {activeTab === 'providers' && (
@@ -525,6 +547,21 @@ export default function AdminPanel() {
                             locations={config.locations || []}
                             onApplyFilters={fetchMaintenanceHistory}
                             setHistoryFilters={setHistoryFilters}
+                        />
+                    )}
+
+                    {activeTab === 'improvements' && (
+                        <AdminCorrectiveActionsSection
+                            assets={config.assets || []}
+                            correctiveError={correctiveError}
+                            correctiveFilters={correctiveFilters}
+                            correctiveLoading={correctiveLoading}
+                            correctiveRows={correctiveRows}
+                            departments={config.departments || []}
+                            locations={config.locations || []}
+                            onApplyFilters={fetchCorrectiveActions}
+                            onUpdate={updateCorrectiveAction}
+                            setCorrectiveFilters={setCorrectiveFilters}
                         />
                     )}
 
