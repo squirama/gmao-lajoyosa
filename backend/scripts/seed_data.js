@@ -558,10 +558,10 @@ async function seed() {
       const assetId = av.maquina ? (assetMap[av.maquina] || null) : null;
       const userId = userMap[av.operario] || defaultUserId;
 
-      let dateExpr = 'NOW()';
+      let parsedDate = null;
       if (av.fecha && /^\d{2}\/\d{2}\/\d{4}$/.test(av.fecha)) {
         const parts = av.fecha.split('/');
-        dateExpr = `'${parts[2]}-${parts[1]}-${parts[0]}'`;
+        parsedDate = parts[2] + '-' + parts[1] + '-' + parts[0];
       }
 
       const comment = av.titulo + (av.desc ? (' — ' + av.desc) : '');
@@ -574,8 +574,8 @@ async function seed() {
       if (!ex.rows[0]) {
         const r = await client.query(
           `INSERT INTO intervention_logs (asset_id, user_id, created_at, global_comment, solution)
-           VALUES ($1, $2, ${dateExpr}, $3, $4) RETURNING id`,
-          [assetId, userId, comment, solution]
+           VALUES ($1, $2, COALESCE($5::timestamp, NOW()), $3, $4) RETURNING id`,
+          [assetId, userId, comment, solution, parsedDate]
         );
         await client.query(
           `INSERT INTO intervention_tasks (intervention_id, description, status)
