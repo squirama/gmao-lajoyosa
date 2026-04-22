@@ -403,9 +403,9 @@ const AVERIAS = [
 ];
 
 const USERS = [
-  { full_name: 'Sergio Aznar', role: 'ADMIN', username: 'sergio', password: 'demo2024' },
-  { full_name: 'Roberto Coll', role: 'OPERATOR', username: 'roberto', password: 'demo2024' },
-  { full_name: 'Raquel Diaz', role: 'OPERATOR', username: 'raquel', password: 'demo2024' },
+  { full_name: 'Sergio Aznar', role: 'ADMIN', username: 'usuario', password: 'demo2024' },
+  { full_name: 'Roberto Coll', role: 'OPERATOR', username: 'operario1', password: 'demo2024' },
+  { full_name: 'Raquel Diaz', role: 'OPERATOR', username: 'operario2', password: 'demo2024' },
 ];
 
 const SPARE_PARTS = [
@@ -590,7 +590,7 @@ async function seed() {
 
     console.log('Seed La Joyosa completado.');
     console.log(`  Assets: ${Object.keys(assetMap).length}`);
-    console.log(`  Users: sergio / roberto / raquel  (password: demo2024)`);
+    console.log(`  Users: usuario / operario1 / operario2  (password: demo2024)`);
     console.log(`  Intervenciones: ${seedOk} ok, ${seedFail} errores`);
   } catch (err) {
     console.error('Seed error (no fatal):', err.message);
