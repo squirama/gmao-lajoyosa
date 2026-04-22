@@ -527,3 +527,36 @@ exports.createStockMovement = async (request, reply) => {
         client.release();
     }
 };
+
+const path = require('path');
+const fs = require('fs');
+const util = require('util');
+const { pipeline } = require('stream');
+
+// POST /admin/inventory/:id/documents
+exports.uploadStockDocument = async (request, reply) => {
+    let id;
+    try {
+        id = parseInt(request.params.id, 10);
+    } catch (e) {
+        return reply.code(400).send({ error: 'ID invalido' });
+    }
+    const documentsPath = process.env.DOCUMENTS_PATH || path.join(__dirname, '..', 'uploads', 'documents');
+    if (!fs.existsSync(documentsPath)) fs.mkdirSync(documentsPath, { recursive: true });
+
+    const parts = request.parts();
+    const files = [];
+    for await (const part of parts) {
+        if (!part.file) continue;
+        const safeFilename = `inv_${id}_${Date.now()}_${part.filename.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+        const targetPath = path.join(documentsPath, safeFilename);
+        await util.promisify(pipeline)(part.file, fs.createWriteStream(targetPath));
+        files.push({ filename: safeFilename, url: `/documents/${safeFilename}` });
+    }
+    return { success: true, files };
+};
+
+// DELETE /admin/inventory/:id/documents/:kind
+exports.deleteStockDocument = async (request, reply) => {
+    return { success: true };
+};

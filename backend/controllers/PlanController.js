@@ -301,3 +301,33 @@ exports.uploadDocument = async (request, reply) => {
 
     return { success: true, files };
 };
+
+// GET /admin/plans/:id/documents
+exports.getPlanDocuments = async (request, reply) => {
+    try {
+        const planId = parseInt(request.params.id, 10);
+        const result = await db.query(
+            `SELECT mh.id, mh.document_path, mh.performed_date, mh.notes
+             FROM maintenance_history mh
+             WHERE mh.plan_id = $1 AND mh.document_path IS NOT NULL
+             ORDER BY mh.performed_date DESC`,
+            [planId]
+        );
+        return result.rows;
+    } catch (err) {
+        request.log.error(err);
+        return reply.code(500).send({ error: 'Error al obtener documentos' });
+    }
+};
+
+// DELETE /admin/plan-documents/:id
+exports.deletePlanDocument = async (request, reply) => {
+    try {
+        const id = parseInt(request.params.id, 10);
+        await db.query('UPDATE maintenance_history SET document_path = NULL WHERE id = $1', [id]);
+        return { success: true };
+    } catch (err) {
+        request.log.error(err);
+        return reply.code(500).send({ error: 'Error al eliminar documento' });
+    }
+};
