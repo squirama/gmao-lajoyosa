@@ -1,8 +1,9 @@
 const { buildApp } = require('./app');
 
 const start = async () => {
+    let fastify;
     try {
-        const fastify = await buildApp({ logger: true });
+        fastify = await buildApp({ logger: true });
         await fastify.listen({ port: process.env.PORT || 3000, host: '0.0.0.0' });
         const address = fastify.server.address();
         console.log(`
@@ -13,7 +14,7 @@ const start = async () => {
         #################################################
         `);
     } catch (err) {
-        fastify.log.error(err);
+        console.error('ERROR AL ARRANCAR:', err);
         process.exit(1);
     }
 };
