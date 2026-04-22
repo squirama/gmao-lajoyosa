@@ -9,9 +9,11 @@ async function insertPlan(client, plan) {
             start_date,
             notification_email,
             is_legal,
-            force_dow
+            force_dow,
+            is_documentary,
+            document_steps
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *`,
         [
             plan.assetId,
@@ -23,6 +25,8 @@ async function insertPlan(client, plan) {
             plan.notificationEmail,
             plan.isLegal,
             plan.forceDow,
+            plan.isDocumentary || false,
+            JSON.stringify(Array.isArray(plan.documentSteps) ? plan.documentSteps : []),
         ]
     );
     return res.rows[0];
@@ -38,7 +42,9 @@ async function updatePlan(client, planId, plan) {
              notification_email = $5,
              is_legal = $6,
              force_dow = $7,
-             next_due_date = CASE WHEN $3 <= 0 THEN NULL ELSE next_due_date END
+             next_due_date = CASE WHEN $3 <= 0 THEN NULL ELSE next_due_date END,
+             is_documentary = $9,
+             document_steps = $10
          WHERE id = $8
          RETURNING *`,
         [
@@ -50,6 +56,8 @@ async function updatePlan(client, planId, plan) {
             plan.isLegal,
             plan.forceDow,
             planId,
+            plan.isDocumentary || false,
+            JSON.stringify(Array.isArray(plan.documentSteps) ? plan.documentSteps : []),
         ]
     );
     return res.rows[0];

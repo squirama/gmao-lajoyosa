@@ -10,6 +10,8 @@ const emptyPlanForm = {
     start_date: '',
     is_legal: false,
     force_dow: false,
+    is_documentary: false,
+    document_steps: [],
 };
 
 export function useAdminPlans(authHeader, refreshConfig) {

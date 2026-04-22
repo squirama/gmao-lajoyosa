@@ -218,6 +218,8 @@ function normalizePlanPayload(body) {
             : ensureEmail(rawNotificationEmail, 'notification_email', { required: false }),
         isLegal: ensureBoolean(body.is_legal, 'is_legal', { defaultValue: false }),
         forceDow: ensureBoolean(body.force_dow, 'force_dow', { defaultValue: false }),
+        isDocumentary: ensureBoolean(body.is_documentary, 'is_documentary', { defaultValue: false }),
+        documentSteps: Array.isArray(body.document_steps) ? body.document_steps : [],
     };
 }
 

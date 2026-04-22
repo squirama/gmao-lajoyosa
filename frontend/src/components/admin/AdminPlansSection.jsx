@@ -1,5 +1,61 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
+
+const STEP_TYPE_LABELS = {
+    CHECK: 'Verificacion SI/NO',
+    TEXT: 'Texto corto',
+    LONG_TEXT: 'Texto largo',
+    NUMBER: 'Numero/lectura',
+    DATE: 'Fecha',
+};
+
+function AddStepRow({ planForm, setPlanForm }) {
+    const [stepType, setStepType] = useState('CHECK');
+    const [stepTitle, setStepTitle] = useState('');
+    const [required, setRequired] = useState(true);
+
+    const addStep = () => {
+        const title = stepTitle.trim();
+        if (!title) return;
+        const newStep = {
+            id: Date.now().toString(),
+            step_type: stepType,
+            title,
+            required,
+        };
+        setPlanForm({ ...planForm, document_steps: [...(planForm.document_steps || []), newStep] });
+        setStepTitle('');
+    };
+
+    return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
+            <select
+                value={stepType}
+                onChange={(e) => setStepType(e.target.value)}
+                className="operator-select admin-field"
+                style={{ minWidth: '160px', flex: '0 0 auto' }}
+            >
+                {Object.entries(STEP_TYPE_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                ))}
+            </select>
+            <input
+                value={stepTitle}
+                onChange={(e) => setStepTitle(e.target.value)}
+                className="operator-select admin-field"
+                placeholder="Descripcion del paso"
+                style={{ flex: 1, minWidth: '160px' }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStep(); } }}
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
+                Obligatorio
+            </label>
+            <button type="button" className="btn-manual" onClick={addStep}>+ ANADIR PASO</button>
+        </div>
+    );
+}
+
 function normalizePlanDrafts(plans) {
     return Object.fromEntries(
         (Array.isArray(plans) ? plans : [])
@@ -190,6 +246,36 @@ export default function AdminPlansSection({
                         />
                         <label className="hmi-label" style={{ color: 'var(--neon-orange)' }}>Requisito legal / normativa</label>
                     </div>
+
+                    <div className="admin-toggle admin-field--full">
+                        <input
+                            type="checkbox"
+                            checked={planForm.is_documentary || false}
+                            onChange={(e) => setPlanForm({ ...planForm, is_documentary: e.target.checked, document_steps: e.target.checked ? (planForm.document_steps || []) : [] })}
+                            style={{ accentColor: 'var(--neon-purple)' }}
+                        />
+                        <label className="hmi-label" style={{ color: 'var(--neon-purple)' }}>Plan documental con checklist</label>
+                    </div>
+
+                    {planForm.is_documentary && (
+                        <div className="admin-field--full" style={{ border: '1px solid rgba(128,0,128,0.35)', borderRadius: '8px', padding: '12px', background: 'rgba(128,0,128,0.05)' }}>
+                            <div style={{ color: 'var(--neon-purple)', fontWeight: 'bold', marginBottom: '10px' }}>Pasos del checklist</div>
+                            {(planForm.document_steps || []).map((step, idx) => (
+                                <div key={step.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <span style={{ color: '#aaa', minWidth: '20px' }}>{idx + 1}.</span>
+                                    <span style={{ flex: 1, color: '#ddd' }}>{step.title}</span>
+                                    <span style={{ color: '#888', fontSize: '0.75rem' }}>[{step.step_type}]</span>
+                                    <button
+                                        type="button"
+                                        className="btn-danger"
+                                        style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                                        onClick={() => setPlanForm({ ...planForm, document_steps: planForm.document_steps.filter((_, i) => i !== idx) })}
+                                    >✕</button>
+                                </div>
+                            ))}
+                            <AddStepRow planForm={planForm} setPlanForm={setPlanForm} />
+                        </div>
+                    )}
 
                     {planForm.notify_external && (
                         <div className="admin-field--full admin-inline-banner">
