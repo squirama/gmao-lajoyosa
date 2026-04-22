@@ -51,7 +51,17 @@ export default function Login({ setContext }) {
                     boxShadow: '0 6px 16px rgba(0,0,0,0.22)',
                 }}
             >
-                <h1 style={{ textAlign: 'center', color: '#f39c12', marginBottom: '30px' }}>GMAO ACCESO</h1>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                    <img
+                        src="/logo.png"
+                        alt="La Joyosa"
+                        style={{ maxHeight: '80px', maxWidth: '220px', objectFit: 'contain' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                </div>
+                <h1 style={{ textAlign: 'center', color: '#f39c12', marginBottom: '30px', fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+                    GESTIÓN DE MANTENIMIENTO
+                </h1>
 
                 {error && (
                     <div
@@ -94,7 +104,7 @@ export default function Login({ setContext }) {
 
                     <div style={{ marginBottom: '30px' }}>
                         <label htmlFor="login-password" style={{ display: 'block', marginBottom: '5px', color: '#aaa' }}>
-                            Contrasena
+                            Contraseña
                         </label>
                         <input
                             id="login-password"
