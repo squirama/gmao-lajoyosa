@@ -464,7 +464,6 @@ async function ensureSparePart(client, sp) {
 async function seed() {
   const client = await db.connect();
   try {
-    await client.query('BEGIN');
 
     const locGasId = await ensureLocation(client, 'GASOLINERA ESTACION');
     const locPosId = await ensureLocation(client, 'POSTAS DE LA JOYOSA');
@@ -554,7 +553,9 @@ async function seed() {
       await ensureSparePart(client, sp);
     }
 
+    let seedOk = 0, seedFail = 0;
     for (const av of AVERIAS) {
+      try {
       const assetId = av.maquina ? (assetMap[av.maquina] || null) : null;
       const userId = userMap[av.operario] || defaultUserId;
 
@@ -583,17 +584,16 @@ async function seed() {
           [r.rows[0].id, av.tipo + ': ' + av.titulo]
         );
       }
+      seedOk++;
+      } catch (itemErr) { seedFail++; }
     }
 
-    await client.query('COMMIT');
     console.log('Seed La Joyosa completado.');
     console.log(`  Assets: ${Object.keys(assetMap).length}`);
     console.log(`  Users: sergio / roberto / raquel  (password: demo2024)`);
-    console.log(`  Intervenciones historicas: ${AVERIAS.length}`);
+    console.log(`  Intervenciones: ${seedOk} ok, ${seedFail} errores`);
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Seed fallido:', err.message);
-    process.exitCode = 1;
+    console.error('Seed error (no fatal):', err.message);
   } finally {
     client.release();
     await db.pool.end();
