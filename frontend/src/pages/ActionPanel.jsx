@@ -12,17 +12,6 @@ export default function ActionPanel({ context }) {
         NUMBER: 'NUMBER',
         DATE: 'DATE',
     };
-    const ISO_CLASSIFICATIONS = [
-        { value: 'CORRECTION', label: 'Correccion puntual' },
-        { value: 'CORRECTIVE_ACTION', label: 'Accion correctiva' },
-        { value: 'IMPROVEMENT_OPPORTUNITY', label: 'Oportunidad de mejora' },
-        { value: 'TECHNICAL_CHANGE', label: 'Cambio tecnico realizado' },
-    ];
-    const ISO_IMPACTS = [
-        { value: 'NONE', label: 'Sin impacto' },
-        { value: 'POTENTIAL', label: 'Impacto potencial' },
-        { value: 'CONFIRMED', label: 'Impacto confirmado' },
-    ];
 
     const [availableTasks, setAvailableTasks] = useState([]);
     const [selectedTasks, setSelectedTasks] = useState({});
@@ -43,15 +32,7 @@ export default function ActionPanel({ context }) {
     const [selectedPartId, setSelectedPartId] = useState("");
     const [selectedPartQty, setSelectedPartQty] = useState(1);
     const [openPlanDocuments, setOpenPlanDocuments] = useState({});
-    const [improvementMeta, setImprovementMeta] = useState({
-        classification: 'CORRECTION',
-        impact_level: 'NONE',
-        probable_cause: '',
-        preventive_action: '',
-        follow_up_required: false,
-    });
     const normalizedSolution = String(solution || '').trim();
-    const requiresOpenFollowUp = improvementMeta.follow_up_required || normalizedSolution.length === 0;
 
     const resolvePlanDocumentLabel = (document) => {
         if (document?.document_name) return document.document_name;
@@ -320,11 +301,6 @@ export default function ActionPanel({ context }) {
                     duration_minutes: parseInt(duration), // Send duration for general breakdown too
                     solution: solution,
                     document_path: documentPath,
-                    classification: improvementMeta.classification,
-                    impact_level: improvementMeta.impact_level,
-                    probable_cause: improvementMeta.probable_cause,
-                    preventive_action: improvementMeta.preventive_action,
-                    follow_up_required: requiresOpenFollowUp,
                     tasks: [{
                         description: "AVERÍA GENERAL / MANTENIMIENTO CORRECTIVO",
                         checked: true,
@@ -800,72 +776,7 @@ export default function ActionPanel({ context }) {
                     </div>
                 </div>
 
-                <div className="action-panel-details action-panel-section-card" style={{ borderTop: '1px solid #333', paddingTop: '20px', marginTop: '20px' }}>
-                    <label className="hmi-label" style={{ color: 'var(--neon-cyan)' }}>
-                        EVALUACION ISO / MEJORA (AVERIA O CORRECTIVO):
-                    </label>
-                    <div style={{ color: requiresOpenFollowUp ? '#fca5a5' : '#9ae6b4', marginTop: '10px', fontSize: '0.95rem' }}>
-                        {requiresOpenFollowUp
-                            ? 'Si no indicas solucion, la averia quedara abierta en Admin > Correctivos hasta que alguien la cierre.'
-                            : 'Con solucion indicada y sin seguimiento manual, el registro quedara cerrado al guardar.'}
-                    </div>
-                    <div className="admin-form-grid" style={{ marginTop: '12px' }}>
-                        <div>
-                            <label className="hmi-label">Tipo de cierre</label>
-                            <select
-                                className="operator-select admin-field"
-                                value={improvementMeta.classification}
-                                onChange={e => setImprovementMeta(current => ({ ...current, classification: e.target.value }))}
-                            >
-                                {ISO_CLASSIFICATIONS.map(option => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="hmi-label">Impacto inocuidad / calidad</label>
-                            <select
-                                className="operator-select admin-field"
-                                value={improvementMeta.impact_level}
-                                onChange={e => setImprovementMeta(current => ({ ...current, impact_level: e.target.value }))}
-                            >
-                                {ISO_IMPACTS.map(option => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="admin-field--full">
-                            <label className="hmi-label">Causa probable</label>
-                            <textarea
-                                className="hmi-textarea"
-                                placeholder="Que ha originado la averia o que debilidad se ha detectado..."
-                                value={improvementMeta.probable_cause}
-                                onChange={e => setImprovementMeta(current => ({ ...current, probable_cause: e.target.value }))}
-                                style={{ height: '80px' }}
-                            />
-                        </div>
-                        <div className="admin-field--full">
-                            <label className="hmi-label">Medida preventiva / mejora</label>
-                            <textarea
-                                className="hmi-textarea"
-                                placeholder="Que accion ayuda a evitar recurrencia o que mejora se propone..."
-                                value={improvementMeta.preventive_action}
-                                onChange={e => setImprovementMeta(current => ({ ...current, preventive_action: e.target.value }))}
-                                style={{ height: '80px' }}
-                            />
-                        </div>
-                        <div className="admin-field--full">
-                            <label className="admin-toggle">
-                                <input
-                                    type="checkbox"
-                                    checked={improvementMeta.follow_up_required}
-                                    onChange={e => setImprovementMeta(current => ({ ...current, follow_up_required: e.target.checked }))}
-                                />
-                                <span>Dejar abierta para seguimiento posterior</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* Inventario / Repuestos */}
                 <div className="action-panel-inventory-box action-panel-section-card" style={{ width: '100%', maxWidth: '940px', boxSizing: 'border-box', margin: '25px auto 0', padding: '15px', border: '1px solid var(--neon-purple)', borderRadius: '8px', background: 'rgba(128, 0, 128, 0.05)' }}>
