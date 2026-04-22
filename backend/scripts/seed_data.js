@@ -544,7 +544,7 @@ async function seed() {
       if (!ex.rows[0]) {
         await client.query(
           `INSERT INTO maintenance_plans (asset_id, task_description, frequency_days, start_date, next_due_date)
-           VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_DATE + $3)`,
+           VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_DATE + ($3::integer))`,
           [aId, p.task, p.freq]
         );
       }
