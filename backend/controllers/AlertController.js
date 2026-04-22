@@ -15,6 +15,40 @@ function buildWeekRange(referenceDate = new Date()) {
     return { monday, sunday };
 }
 
+function buildWeeklyPlanLines(plans, mondayStr) {
+    return plans.map((plan) => {
+        const dueDate = formatDateOnly(plan.next_due_date);
+        const prefix = dueDate < mondayStr ? '[VENCIDA]' : `[${dueDate}]`;
+        return `${prefix} ${plan.asset_name} - ${plan.task_description}`;
+    });
+}
+
+function buildCorrectiveReminderSections(rows) {
+    const openItems = [];
+    const followUpItems = [];
+
+    for (const row of rows) {
+        const createdAt = formatDateOnly(row.created_at);
+        const baseLine = `[${createdAt}] ${row.asset_name} - ${row.task_description}`;
+        const comment = String(row.failure_cause || row.global_comment || '').trim();
+        const solution = String(row.solution || '').trim();
+        const followUpNotes = String(row.follow_up_notes || '').trim();
+
+        if (!solution && !followUpNotes) {
+            openItems.push(comment ? `${baseLine} | ${comment}` : baseLine);
+            continue;
+        }
+
+        const detailParts = [];
+        if (comment) detailParts.push(`Aviso: ${comment}`);
+        if (solution) detailParts.push(`Solucion: ${solution}`);
+        if (followUpNotes) detailParts.push(`Seguimiento: ${followUpNotes}`);
+        followUpItems.push(detailParts.length > 0 ? `${baseLine} | ${detailParts.join(' | ')}` : baseLine);
+    }
+
+    return { openItems, followUpItems };
+}
+
 async function sendWeeklyDepartmentReminders(client, referenceDate = new Date()) {
     if (referenceDate.getDay() !== 1) {
         return 0;
@@ -66,26 +100,55 @@ async function sendWeeklyDepartmentReminders(client, referenceDate = new Date())
             [department.id, sundayStr]
         );
 
-        if (plansRes.rows.length === 0) {
+        const correctivesRes = await client.query(
+            `SELECT
+                l.id,
+                l.created_at,
+                l.global_comment,
+                l.failure_cause,
+                l.solution,
+                l.follow_up_notes,
+                a.name AS asset_name,
+                COALESCE(NULLIF(STRING_AGG(DISTINCT it.description, ' | '), ''), 'Averia / Correctivo') AS task_description
+             FROM intervention_logs l
+             JOIN assets a ON l.asset_id = a.id
+             LEFT JOIN intervention_tasks it ON it.intervention_id = l.id
+             WHERE a.dept_id = $1
+               AND l.follow_up_required = true
+               AND l.follow_up_status = 'OPEN'
+             GROUP BY l.id, l.created_at, l.global_comment, l.failure_cause, l.solution, l.follow_up_notes, a.name
+             ORDER BY l.created_at DESC, a.name ASC`,
+            [department.id]
+        );
+
+        const planLines = buildWeeklyPlanLines(plansRes.rows, mondayStr);
+        const { openItems, followUpItems } = buildCorrectiveReminderSections(correctivesRes.rows);
+
+        if (planLines.length === 0 && openItems.length === 0 && followUpItems.length === 0) {
             continue;
         }
 
-        const lines = plansRes.rows.map((plan) => {
-            const dueDate = formatDateOnly(plan.next_due_date);
-            const prefix = dueDate < mondayStr ? '[VENCIDA]' : `[${dueDate}]`;
-            return `${prefix} ${plan.asset_name} - ${plan.task_description}`;
-        });
+        const sections = [
+            `Area: ${department.name}`,
+            `Sede: ${department.location_name}`,
+            `Semana: ${mondayStr} a ${sundayStr}`,
+        ];
+
+        if (planLines.length > 0) {
+            sections.push('', 'Tareas pendientes o previstas:', ...planLines);
+        }
+
+        if (openItems.length > 0) {
+            sections.push('', 'Correctivos abiertos:', ...openItems);
+        }
+
+        if (followUpItems.length > 0) {
+            sections.push('', 'Correctivos en seguimiento:', ...followUpItems);
+        }
 
         await sendAlertEmail(
             `Recordatorio semanal de mantenimiento - ${department.name}`,
-            [
-                `Area: ${department.name}`,
-                `Sede: ${department.location_name}`,
-                `Semana: ${mondayStr} a ${sundayStr}`,
-                '',
-                'Tareas pendientes o previstas:',
-                ...lines,
-            ].join('\n'),
+            sections.join('\n'),
             recipient
         );
 
@@ -171,7 +234,7 @@ exports.generateAlerts = async (req, reply) => {
             INSERT INTO pending_alerts (plan_id, asset_id, scheduled_date)
             SELECT id, asset_id, next_due_date
             FROM maintenance_plans
-            WHERE next_due_date <= CURRENT_DATE
+            WHERE next_due_date <= (CURRENT_DATE + (COALESCE(notification_lead_days, 0) * INTERVAL '1 day'))
             ON CONFLICT (plan_id, scheduled_date) DO NOTHING
         `);
 
@@ -274,6 +337,8 @@ exports.generateAlerts = async (req, reply) => {
 };
 
 exports.__testables = {
+    buildCorrectiveReminderSections,
     buildWeekRange,
+    buildWeeklyPlanLines,
     sendWeeklyDepartmentReminders,
 };

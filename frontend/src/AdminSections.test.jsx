@@ -153,6 +153,7 @@ describe('Admin sections', () => {
 
     it('history muestra adjuntos y aplica filtros', async () => {
         const onApplyFilters = vi.fn();
+        const onReview = vi.fn();
         const setHistoryFilters = vi.fn();
 
         render(
@@ -182,9 +183,23 @@ describe('Admin sections', () => {
                     entry_type: 'corrective',
                     duration_minutes: 45,
                     solution: 'Cambio de rodamiento',
+                }, {
+                    id: 78,
+                    asset_name: 'Encajadora',
+                    task_description: 'Revision semanal',
+                    location_name: 'Sede Central',
+                    department_name: 'Produccion',
+                    operator_name: 'Mario',
+                    notes: 'Todo conforme',
+                    document_path: '',
+                    created_at: '2026-03-19T09:00:00.000Z',
+                    entry_type: 'preventive',
+                    reviewed_at: '2026-03-19T10:00:00.000Z',
+                    reviewed_by_name: 'Estiven',
                 }]}
                 locations={[{ id: 2, name: 'Sede Central' }]}
                 onApplyFilters={onApplyFilters}
+                onReview={onReview}
                 setHistoryFilters={setHistoryFilters}
             />
         );
@@ -194,7 +209,11 @@ describe('Admin sections', () => {
         expect(screen.getByText('Correctivo')).toBeInTheDocument();
         expect(screen.getByText(/cambio de rodamiento/i)).toBeInTheDocument();
         expect(screen.getByText(/2 adjunto/i)).toBeInTheDocument();
+        expect(screen.getByText(/hecho por: laura/i)).toBeInTheDocument();
+        expect(screen.getByText(/revisado por: estiven/i)).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Ver archivo 1' })).toHaveAttribute('href', '/documents/parte-1.pdf');
+        await userEvent.click(screen.getByRole('button', { name: /marcar revisado/i }));
+        expect(onReview).toHaveBeenCalledWith('corrective', 77);
 
         const selects = screen.getAllByRole('combobox');
         await userEvent.selectOptions(selects[0], '2');

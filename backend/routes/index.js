@@ -6,6 +6,7 @@ const LogController = require('../controllers/LogController');
 const ConfigController = require('../controllers/ConfigController');
 const HistoryController = require('../controllers/HistoryController');
 const ActivityController = require('../controllers/ActivityController');
+const CorrectiveActionController = require('../controllers/CorrectiveActionController');
 const ProviderController = require('../controllers/ProviderController');
 
 async function routes(fastify, options) {
@@ -63,7 +64,10 @@ async function routes(fastify, options) {
     fastify.post('/requests', RequestController.createRequest);
     fastify.get('/admin/requests', RequestController.getAllRequests);
     fastify.get('/admin/history', HistoryController.getMaintenanceHistory);
+    fastify.put('/admin/history/:entry_type/:id/review', HistoryController.reviewHistoryEntry);
     fastify.get('/admin/activity', ActivityController.getOverview);
+    fastify.get('/admin/corrective-actions', CorrectiveActionController.getCorrectiveActions);
+    fastify.put('/admin/corrective-actions/:id', CorrectiveActionController.updateCorrectiveAction);
     fastify.get('/admin/providers', ProviderController.getProviders);
     fastify.post('/admin/providers', ProviderController.createProvider);
     fastify.put('/admin/providers/:id', ProviderController.updateProvider);
@@ -81,7 +85,9 @@ async function routes(fastify, options) {
     fastify.post('/admin/maintenance-plans/:id/complete', PlanController.completePlan);
     fastify.post('/admin/maintenance-plans/:id/exception', PlanController.createException);
     fastify.get('/admin/plans/:id/history', PlanController.getPlanHistory);
+    fastify.get('/admin/plans/:id/documents', PlanController.getPlanDocuments);
     fastify.post('/admin/plans/:id/upload', PlanController.uploadDocument);
+    fastify.delete('/admin/plan-documents/:id', PlanController.deletePlanDocument);
 
     // --- Alerts ---
     fastify.post('/cron/generate', AlertController.generateAlerts);
@@ -96,6 +102,8 @@ async function routes(fastify, options) {
     fastify.get('/inventory', InventoryController.getAllStock);
     fastify.get('/inventory/:id', InventoryController.getStockItem);
     fastify.post('/admin/inventory', InventoryController.createStockItem);
+    fastify.post('/admin/inventory/:id/documents', InventoryController.uploadStockDocument);
+    fastify.delete('/admin/inventory/:id/documents/:kind', InventoryController.deleteStockDocument);
     fastify.get('/admin/inventory/distribution', InventoryController.getStockDistribution);
     fastify.get('/admin/inventory/movements', InventoryController.getStockMovements);
     fastify.post('/admin/inventory/distribution', InventoryController.upsertStockDistribution);
@@ -108,6 +116,7 @@ async function routes(fastify, options) {
     fastify.get('/reports/history', ReportController.exportHistory);
     fastify.get('/reports/interventions', ReportController.exportInterventions);
     fastify.get('/reports/requests', ReportController.exportRequests);
+    fastify.get('/reports/audit-correctives', ReportController.exportAuditCorrectives);
 }
 
 module.exports = routes;

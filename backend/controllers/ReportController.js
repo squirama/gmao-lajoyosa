@@ -67,7 +67,7 @@ exports.exportInterventions = async (req, reply) => {
                 a.name as "Maquina",
                 u.full_name as "Operario",
                 l.duration_minutes as "Duracion_Min",
-                l.global_comment as "Problema_Descripcion",
+                COALESCE(l.failure_cause, l.global_comment) as "Causa_Averia",
                 l.solution as "Solucion_Aplicada"
             FROM intervention_logs l
             JOIN assets a ON l.asset_id = a.id
@@ -125,6 +125,57 @@ exports.exportRequests = async (req, reply) => {
 
         reply.header('Content-Type', 'text/csv');
         reply.header('Content-Disposition', 'attachment; filename="solicitudes.csv"');
+        return toCSV(res.rows);
+    } catch (e) {
+        console.error("Export Error:", e);
+        reply.code(500).send({ error: e.message });
+    } finally {
+        client.release();
+    }
+};
+
+// 4. AUDITORIA / MEJORAS Y CORRECTIVAS
+exports.exportAuditCorrectives = async (req, reply) => {
+    const { start, end, asset_id } = req.query;
+    const client = await db.connect();
+
+    try {
+        let query = `
+            SELECT
+                TO_CHAR(l.created_at, 'DD/MM/YYYY HH24:MI') as "FechaHora",
+                loc.name as "Sede",
+                d.name as "Area",
+                a.name as "Maquina",
+                u.full_name as "Operario",
+                COALESCE(l.failure_cause, l.global_comment) as "Causa_Averia",
+                l.solution as "Solucion_Aplicada",
+                l.classification as "Clasificacion",
+                l.impact_level as "Impacto_Inocuidad_Calidad",
+                l.probable_cause as "Causa_Detectada",
+                l.preventive_action as "Accion_Preventiva_Mejora",
+                CASE WHEN l.follow_up_required THEN 'SI' ELSE 'NO' END as "Requiere_Seguimiento",
+                l.follow_up_status as "Estado_Seguimiento",
+                l.follow_up_notes as "Notas_Seguimiento"
+            FROM intervention_logs l
+            JOIN assets a ON l.asset_id = a.id
+            LEFT JOIN departments d ON a.dept_id = d.id
+            LEFT JOIN locations loc ON d.location_id = loc.id
+            LEFT JOIN users u ON l.user_id = u.id
+            WHERE 1=1
+        `;
+        const params = [];
+        let idx = 1;
+
+        if (start) { query += ` AND l.created_at >= $${idx++}`; params.push(start); }
+        if (end) { query += ` AND l.created_at <= $${idx++}`; params.push(end + ' 23:59:59'); }
+        if (asset_id) { query += ` AND l.asset_id = $${idx++}`; params.push(asset_id); }
+
+        query += ` ORDER BY l.created_at DESC`;
+
+        const res = await client.query(query, params);
+
+        reply.header('Content-Type', 'text/csv');
+        reply.header('Content-Disposition', 'attachment; filename="auditoria_correctivas_mejoras.csv"');
         return toCSV(res.rows);
     } catch (e) {
         console.error("Export Error:", e);

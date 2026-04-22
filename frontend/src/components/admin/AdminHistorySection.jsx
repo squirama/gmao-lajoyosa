@@ -16,6 +16,20 @@ function formatHistoryDate(item) {
     }).format(date);
 }
 
+function formatReviewedDate(value) {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return new Intl.DateTimeFormat('es-ES', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(date);
+}
+
 function getHistoryTypeMeta(item) {
     if (item.entry_type === 'corrective') {
         return {
@@ -30,6 +44,17 @@ function getHistoryTypeMeta(item) {
     };
 }
 
+function getCorrectiveClassificationLabel(item) {
+    const labels = {
+        CORRECTION: 'Correccion puntual',
+        CORRECTIVE_ACTION: 'Accion correctiva',
+        IMPROVEMENT_OPPORTUNITY: 'Oportunidad de mejora',
+        TECHNICAL_CHANGE: 'Cambio tecnico',
+    };
+
+    return labels[item.classification] || item.classification || '';
+}
+
 export default function AdminHistorySection({
     assets,
     departments,
@@ -39,6 +64,7 @@ export default function AdminHistorySection({
     historyRows,
     locations,
     onApplyFilters,
+    onReview = () => {},
     setHistoryFilters,
 }) {
     const visibleDepartments = historyFilters.location_id
@@ -76,7 +102,7 @@ export default function AdminHistorySection({
             <div className="card admin-form-card" style={{ border: '2px solid var(--neon-green)', maxWidth: 1280 }}>
                 <h2 className="title" style={{ fontSize: '1.8rem', marginTop: 0 }}>HISTORIAL DE MANTENIMIENTOS</h2>
                 <div className="admin-form-note" style={{ marginBottom: 18 }}>
-                    Vista rapida de preventivos realizados. Desde aqui puedes localizar registros y abrir los archivos adjuntos.
+                    Vista rapida de preventivos y correctivos realizados. Desde aqui puedes localizar registros, revisar lo ejecutado y abrir los archivos adjuntos.
                 </div>
 
                 <div className="admin-form-grid" style={{ marginBottom: 18 }}>
@@ -190,18 +216,33 @@ export default function AdminHistorySection({
                                     <div className="admin-history-meta">
                                         <span>{item.location_name || 'Sin sede'}</span>
                                         <span>{item.department_name || 'Sin area'}</span>
-                                        <span>{item.operator_name || 'Sin operario'}</span>
+                                        <span>Hecho por: {item.operator_name || 'Sin operario'}</span>
                                         {item.duration_minutes > 0 && <span>{item.duration_minutes} min</span>}
                                         <span>{documentPaths.length > 0 ? `${documentPaths.length} adjunto(s)` : 'Sin adjuntos'}</span>
+                                        {item.reviewed_at && (
+                                            <span>
+                                                Revisado por: {item.reviewed_by_name || 'Usuario eliminado'} ({formatReviewedDate(item.reviewed_at)})
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="admin-history-notes">
-                                        {item.notes || 'Sin notas registradas.'}
+                                        {item.entry_type === 'corrective'
+                                            ? `Causa de la averia: ${item.notes || 'Sin causa registrada.'}`
+                                            : (item.notes || 'Sin notas registradas.')}
                                     </div>
 
                                     {item.solution && (
                                         <div className="admin-history-solution">
                                             <strong>Solucion aplicada:</strong> {item.solution}
+                                        </div>
+                                    )}
+
+                                    {item.entry_type === 'corrective' && item.classification && (
+                                        <div className="admin-history-solution">
+                                            <strong>Clasificacion ISO:</strong> {getCorrectiveClassificationLabel(item)}
+                                            {item.impact_level ? ` | Impacto: ${item.impact_level}` : ''}
+                                            {item.follow_up_status ? ` | Seguimiento: ${item.follow_up_status}` : ''}
                                         </div>
                                     )}
 
@@ -220,6 +261,15 @@ export default function AdminHistorySection({
                                             ))
                                         ) : (
                                             <span className="admin-history-no-docs">Sin archivos adjuntos</span>
+                                        )}
+                                        {!item.reviewed_at && (
+                                            <button
+                                                className="hmi-btn admin-history-doc-btn"
+                                                onClick={() => onReview(item.entry_type, item.id)}
+                                                type="button"
+                                            >
+                                                Marcar revisado
+                                            </button>
                                         )}
                                     </div>
                                 </article>

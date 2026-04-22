@@ -1,0 +1,3 @@
+ALTER TABLE maintenance_history
+    ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL;

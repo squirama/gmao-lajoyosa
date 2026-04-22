@@ -103,7 +103,7 @@ exports.getCorrectiveActions = async (req, reply) => {
                 l.asset_id,
                 l.user_id,
                 l.created_at,
-                l.global_comment,
+                COALESCE(l.failure_cause, l.global_comment) AS failure_cause,
                 l.duration_minutes,
                 l.solution,
                 l.document_path,
@@ -116,13 +116,14 @@ exports.getCorrectiveActions = async (req, reply) => {
                 l.follow_up_notes,
                 l.reviewed_at,
                 l.reviewed_by,
+                l.reviewed_by_label,
                 a.name AS asset_name,
                 d.id AS department_id,
                 d.name AS department_name,
                 loc.id AS location_id,
                 loc.name AS location_name,
                 u.full_name AS operator_name,
-                reviewer.full_name AS reviewed_by_name,
+                COALESCE(reviewer.full_name, l.reviewed_by_label) AS reviewed_by_name,
                 COALESCE(NULLIF(STRING_AGG(DISTINCT it.description, ' | '), ''), 'Averia / Correctivo') AS task_description
              FROM intervention_logs l
              JOIN assets a ON l.asset_id = a.id
@@ -138,6 +139,7 @@ exports.getCorrectiveActions = async (req, reply) => {
                 l.user_id,
                 l.created_at,
                 l.global_comment,
+                l.failure_cause,
                 l.duration_minutes,
                 l.solution,
                 l.document_path,
@@ -150,13 +152,15 @@ exports.getCorrectiveActions = async (req, reply) => {
                 l.follow_up_notes,
                 l.reviewed_at,
                 l.reviewed_by,
+                l.reviewed_by_label,
                 a.name,
                 d.id,
                 d.name,
                 loc.id,
                 loc.name,
                 u.full_name,
-                reviewer.full_name
+                reviewer.full_name,
+                l.reviewed_by_label
              ORDER BY
                 CASE l.follow_up_status WHEN 'OPEN' THEN 0 WHEN 'NOT_REQUIRED' THEN 1 ELSE 2 END,
                 l.created_at DESC`
@@ -236,6 +240,9 @@ exports.updateCorrectiveAction = async (req, reply) => {
             : 'NOT_REQUIRED';
 
         const reviewedBy = access.user?.id || null;
+        const reviewedByLabel = access.user?.full_name
+            || access.user?.username
+            || (access.isAdmin || access.isSuperAdmin ? 'Admin' : null);
 
         const result = await client.query(
             `UPDATE intervention_logs
@@ -248,8 +255,9 @@ exports.updateCorrectiveAction = async (req, reply) => {
                  follow_up_status = $7,
                  follow_up_notes = $8,
                  reviewed_at = CURRENT_TIMESTAMP,
-                 reviewed_by = $9
-             WHERE id = $10
+                 reviewed_by = $9,
+                 reviewed_by_label = $10
+             WHERE id = $11
              RETURNING *`,
             [
                 classification,
@@ -261,6 +269,7 @@ exports.updateCorrectiveAction = async (req, reply) => {
                 resolvedStatus,
                 followUpNotes,
                 reviewedBy,
+                reviewedByLabel,
                 id,
             ]
         );

@@ -15,17 +15,19 @@ function createDefaultDateRange() {
 
 export function useAdminHistory(authHeader) {
     const defaultRange = createDefaultDateRange();
-    const [historyRows, setHistoryRows] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [historyError, setHistoryError] = useState('');
-    const [historyFilters, setHistoryFilters] = useState({
+    const initialFilters = {
         start: defaultRange.start,
         end: defaultRange.end,
         location_id: '',
         department_id: '',
         asset_id: '',
         with_documents: false,
-    });
+    };
+    const [historyRows, setHistoryRows] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState('');
+    const [lastFetchedFilters, setLastFetchedFilters] = useState(initialFilters);
+    const [historyFilters, setHistoryFilters] = useState(initialFilters);
 
     const fetchHistory = async (nextFilters = historyFilters, header = authHeader) => {
         if (!header) return [];
@@ -48,6 +50,7 @@ export function useAdminHistory(authHeader) {
             });
 
             const data = Array.isArray(res.data) ? res.data : [];
+            setLastFetchedFilters({ ...nextFilters });
             setHistoryRows(data);
             return data;
         } catch (error) {
@@ -58,6 +61,17 @@ export function useAdminHistory(authHeader) {
         } finally {
             setHistoryLoading(false);
         }
+    };
+
+    const reviewHistoryEntry = async (entryType, id) => {
+        if (!authHeader) return null;
+
+        const res = await axios.put(`/api/admin/history/${entryType}/${id}/review`, {}, {
+            headers: { Authorization: authHeader },
+        });
+
+        await fetchHistory(lastFetchedFilters, authHeader);
+        return res.data;
     };
 
     useEffect(() => {
@@ -72,6 +86,7 @@ export function useAdminHistory(authHeader) {
         historyFilters,
         historyLoading,
         historyRows,
+        reviewHistoryEntry,
         setHistoryFilters,
     };
 }

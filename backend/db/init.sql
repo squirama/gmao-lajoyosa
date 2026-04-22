@@ -32,11 +32,14 @@ CREATE TABLE assets (
 
 CREATE TABLE providers (
     id SERIAL PRIMARY KEY,
+    external_code VARCHAR(40),
     company_name VARCHAR(160) NOT NULL,
+    provider_category VARCHAR(40) NOT NULL DEFAULT 'SERVICIOS_MTO',
     service_type VARCHAR(160),
     contact_name VARCHAR(160),
     phone VARCHAR(80),
     email VARCHAR(160),
+    homologation_status VARCHAR(40),
     notes TEXT,
     contract_expires_on DATE,
     active BOOLEAN DEFAULT TRUE,
@@ -105,7 +108,17 @@ CREATE TABLE maintenance_plans (
     notification_email VARCHAR(255),
     is_legal BOOLEAN DEFAULT FALSE,
     force_dow BOOLEAN DEFAULT FALSE,
-    missed_threshold_email_sent_at TIMESTAMP
+    missed_threshold_email_sent_at TIMESTAMP,
+    is_documentary BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE plan_document_steps (
+    id SERIAL PRIMARY KEY,
+    plan_id INTEGER NOT NULL REFERENCES maintenance_plans(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    step_type VARCHAR(20) NOT NULL,
+    required BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE pending_alerts (
@@ -141,11 +154,26 @@ CREATE TABLE maintenance_history (
     plan_id INTEGER REFERENCES maintenance_plans(id) ON DELETE SET NULL,
     asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
     operator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_by_label VARCHAR(100),
     scheduled_date DATE,
     performed_date DATE NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    document_path TEXT
+    document_path TEXT,
+    reviewed_at TIMESTAMP
+);
+
+CREATE TABLE maintenance_history_step_responses (
+    id SERIAL PRIMARY KEY,
+    history_id INTEGER NOT NULL REFERENCES maintenance_history(id) ON DELETE CASCADE,
+    step_id INTEGER REFERENCES plan_document_steps(id) ON DELETE SET NULL,
+    step_title VARCHAR(255) NOT NULL,
+    step_type VARCHAR(20) NOT NULL,
+    response_text TEXT,
+    response_number NUMERIC(12, 2),
+    response_date DATE,
+    response_boolean BOOLEAN
 );
 
 CREATE TABLE maintenance_requests (
@@ -163,9 +191,20 @@ CREATE TABLE intervention_logs (
     user_id INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT NOW(),
     global_comment TEXT,
+    failure_cause TEXT,
     duration_minutes INTEGER DEFAULT 0,
     solution TEXT,
-    document_path TEXT
+    document_path TEXT,
+    classification VARCHAR(40) NOT NULL DEFAULT 'CORRECTION',
+    impact_level VARCHAR(20) NOT NULL DEFAULT 'NONE',
+    probable_cause TEXT,
+    preventive_action TEXT,
+    follow_up_required BOOLEAN NOT NULL DEFAULT FALSE,
+    follow_up_status VARCHAR(20) NOT NULL DEFAULT 'NOT_REQUIRED',
+    follow_up_notes TEXT,
+    reviewed_at TIMESTAMP,
+    reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_by_label VARCHAR(100)
 );
 
 CREATE TABLE intervention_tasks (
@@ -215,6 +254,8 @@ CREATE TABLE spare_parts (
     location VARCHAR(255),
     supplier_name VARCHAR(255),
     supplier_contact VARCHAR(255),
+    technical_sheet_path VARCHAR(255),
+    safety_sheet_path VARCHAR(255),
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

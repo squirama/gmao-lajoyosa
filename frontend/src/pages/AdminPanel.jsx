@@ -148,6 +148,7 @@ export default function AdminPanel() {
         historyFilters,
         historyLoading,
         historyRows,
+        reviewHistoryEntry,
         setHistoryFilters,
     } = useAdminHistory(authHeader);
     const {
@@ -546,6 +547,7 @@ export default function AdminPanel() {
                             historyRows={historyRows}
                             locations={config.locations || []}
                             onApplyFilters={fetchMaintenanceHistory}
+                            onReview={reviewHistoryEntry}
                             setHistoryFilters={setHistoryFilters}
                         />
                     )}

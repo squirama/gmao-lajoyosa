@@ -29,7 +29,8 @@ export default function ActionPanel({ context }) {
     const [users, setUsers] = useState([]);
     // Auto-assign operator from logged-in user context
     const [operator, setOperator] = useState(context.user?.id || "");
-    const [globalComment, setGlobalComment] = useState("");
+    const [maintenanceObservation, setMaintenanceObservation] = useState("");
+    const [failureCause, setFailureCause] = useState("");
     const [solution, setSolution] = useState(""); // New state for solution
     const [duration, setDuration] = useState(0); // New state for duration
     const [loading, setLoading] = useState(false);
@@ -256,13 +257,13 @@ export default function ActionPanel({ context }) {
                 };
             });
 
-        if (!isGeneralBreakdown && validTasks.length === 0 && !globalComment) {
-            alert("⚠️ Seleccione al menos una tarea o escriba un comentario global.");
+        if (!isGeneralBreakdown && validTasks.length === 0) {
+            alert("⚠️ Seleccione al menos una tarea de mantenimiento.");
             return;
         }
 
-        if (isGeneralBreakdown && !globalComment) {
-            alert("⚠️ Para 'AVERÍA O CORRECTIVO', debe escribir un comentario global.");
+        if (isGeneralBreakdown && !failureCause.trim()) {
+            alert("⚠️ Para 'AVERIA O CORRECTIVO', debe indicar la causa de la averia.");
             return;
         }
 
@@ -310,23 +311,12 @@ export default function ActionPanel({ context }) {
             // Convert array to JSON string for storage in the single TEXT column
             const documentPath = documentPaths.length > 0 ? JSON.stringify(documentPaths) : null;
 
-            const payload = {
-                asset_id: context.asset.id,
-                user_id: operator,
-                global_comment: globalComment,
-                duration_minutes: parseInt(duration),
-                solution: solution,
-                document_path: documentPath,
-                tasks: validTasks,
-                consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty }))
-            };
-
             // 1. Log General Breakdown if needed
             if (isGeneralBreakdown) {
                 await axios.post('/api/log', {
                     asset_id: context.asset.id,
                     user_id: operator,
-                    global_comment: globalComment,
+                    failure_cause: failureCause,
                     duration_minutes: parseInt(duration), // Send duration for general breakdown too
                     solution: solution,
                     document_path: documentPath,
@@ -339,7 +329,7 @@ export default function ActionPanel({ context }) {
                         description: "AVERÍA GENERAL / MANTENIMIENTO CORRECTIVO",
                         checked: true,
                         alert: true,
-                        comment: globalComment
+                        comment: ''
                     }],
                     consumed_parts: consumedParts.map(p => ({ spare_part_id: p.id, quantity: p.qty }))
                 });
@@ -350,8 +340,7 @@ export default function ActionPanel({ context }) {
             // This ensures logic for Next Due Date and History is executed server-side
             for (const task of validTasks) {
                 if (task.plan_id) {
-                    // Combine specific task comment and global comment
-                    const combinedNotes = [task.comment, globalComment].filter(Boolean).join(' | ') || 'Completado desde App';
+                    const combinedNotes = String(maintenanceObservation || '').trim() || 'Completado desde App';
 
                     await axios.post(`/api/admin/maintenance-plans/${task.plan_id}/complete`, {
                         operator_id: operator,
@@ -714,10 +703,30 @@ export default function ActionPanel({ context }) {
                                             })}
                                         </div>
                                     )}
+
                                 </div>
                             );
                         })
                     )}
+                </div>
+
+                <div className="action-panel-section-card" style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    border: '1px solid rgba(249, 115, 22, 0.35)',
+                    borderRadius: '8px',
+                    background: 'rgba(249, 115, 22, 0.06)'
+                }}>
+                    <label className="hmi-label" style={{ color: 'var(--neon-orange)', display: 'block', marginBottom: '8px' }}>
+                        Observacion del mantenimiento realizado
+                    </label>
+                    <textarea
+                        className="hmi-textarea"
+                        placeholder="Anade una observacion general del mantenimiento preventivo si procede..."
+                        value={maintenanceObservation}
+                        onChange={(e) => setMaintenanceObservation(e.target.value)}
+                        style={{ height: '72px' }}
+                    />
                 </div>
 
                 <div className="action-panel-primary-submit" style={{ width: '100%', marginTop: '16px' }}>
@@ -731,17 +740,17 @@ export default function ActionPanel({ context }) {
                     </button>
                 </div>
 
-                {/* Optional notes and execution details */}
+                {/* Breakdown details and execution data */}
                 <div className="action-panel-details action-panel-section-card" style={{ borderTop: '1px solid #333', paddingTop: '20px' }}>
-                    <label className="hmi-label" style={{ color: 'var(--neon-orange)' }}>
-                        OBSERVACIONES:
+                    <label className="hmi-label" style={{ color: 'var(--neon-red)' }}>
+                        CAUSA DE LA AVERIA:
                     </label>
                     <textarea
                         className="hmi-textarea"
-                        placeholder="Anade observaciones si quieres dejar constancia de algo..."
-                        value={globalComment}
-                        onChange={e => setGlobalComment(e.target.value)}
-                        style={{ height: '80px' }}
+                        placeholder="Indica la causa o descripcion de la averia. Este campo es solo para correctivos."
+                        value={failureCause}
+                        onChange={e => setFailureCause(e.target.value)}
+                        style={{ height: '80px', borderColor: 'var(--neon-red)' }}
                     />
 
                     <label className="hmi-label" style={{ color: 'var(--neon-green)', marginTop: '10px' }}>

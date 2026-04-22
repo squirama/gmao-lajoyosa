@@ -1,9 +1,10 @@
 const db = require('../db');
 const { getScopedAccess } = require('../services/accessService');
-const { fetchMaintenanceHistory } = require('../repositories/historyRepository');
+const { fetchMaintenanceHistory, markHistoryEntryReviewed } = require('../repositories/historyRepository');
 const {
     ensureBoolean,
     ensureDateOnlyString,
+    ensureEnum,
     ensurePositiveInteger,
     sendValidationError,
 } = require('../utils/validation');
@@ -46,6 +47,46 @@ exports.getMaintenanceHistory = async (req, reply) => {
             startDate,
             withDocuments,
         });
+    } catch (error) {
+        return reply.code(500).send({ error: error.message });
+    } finally {
+        client.release();
+    }
+};
+
+exports.reviewHistoryEntry = async (req, reply) => {
+    let entryType;
+    let entryId;
+
+    try {
+        entryType = ensureEnum(req.params.entry_type, 'entry_type', ['preventive', 'corrective']);
+        entryId = ensurePositiveInteger(req.params.id, 'id');
+    } catch (error) {
+        return sendValidationError(reply, error);
+    }
+
+    const client = await db.connect();
+
+    try {
+        const access = await getScopedAccess(client, req.headers.authorization);
+        if (!access) {
+            return reply.code(401).send({ error: 'Autenticacion requerida' });
+        }
+
+        const reviewerId = access.user?.id || null;
+        const reviewerLabel = access.user?.full_name
+            || access.user?.username
+            || (access.isAdmin || access.isSuperAdmin ? 'Admin' : null);
+        if (!reviewerId && !reviewerLabel) {
+            return reply.code(403).send({ error: 'Usuario sin permisos de revision' });
+        }
+
+        const updated = await markHistoryEntryReviewed(client, access, entryType, entryId, reviewerId, reviewerLabel);
+        if (!updated) {
+            return reply.code(404).send({ error: 'Registro no encontrado' });
+        }
+
+        return updated;
     } catch (error) {
         return reply.code(500).send({ error: error.message });
     } finally {

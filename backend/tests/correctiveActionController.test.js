@@ -71,7 +71,9 @@ test('updateCorrectiveAction cierra el seguimiento cuando el admin tiene alcance
         if (sql.startsWith('UPDATE intervention_logs SET classification = COALESCE($1, classification)')) {
             assert.equal(params[2], null);
             assert.equal(params[6], 'CLOSED');
-            assert.equal(params[9], 12);
+            assert.equal(params[8], 7);
+            assert.equal(params[9], 'Admin');
+            assert.equal(params[10], 12);
             return { rows: [{ id: 12, follow_up_status: 'CLOSED' }] };
         }
 

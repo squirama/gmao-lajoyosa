@@ -21,12 +21,14 @@ test('createLog guarda document_path en intervention_logs', async () => {
             return { rows: [] };
         }
 
-        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
-            assert.equal(params[5], '["/documents/averia.pdf"]');
-            assert.equal(params[6], 'CORRECTION');
-            assert.equal(params[7], 'NONE');
-            assert.equal(params[10], false);
-            assert.equal(params[11], 'NOT_REQUIRED');
+        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, failure_cause, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
+            assert.equal(params[2], 'Cambio de sensor');
+            assert.equal(params[3], 'Cambio de sensor');
+            assert.equal(params[6], '["/documents/averia.pdf"]');
+            assert.equal(params[7], 'CORRECTION');
+            assert.equal(params[8], 'NONE');
+            assert.equal(params[11], false);
+            assert.equal(params[12], 'NOT_REQUIRED');
             return { rows: [{ id: 41 }] };
         }
 
@@ -52,7 +54,7 @@ test('createLog guarda document_path en intervention_logs', async () => {
             body: {
                 asset_id: 8,
                 user_id: 2,
-                global_comment: 'Cambio de sensor',
+                failure_cause: 'Cambio de sensor',
                 duration_minutes: 25,
                 solution: 'Sustitucion y prueba',
                 document_path: '["/documents/averia.pdf"]',
@@ -96,10 +98,12 @@ test('createLog envia correo si hay comentario o solucion aunque no haya campana
             return { rows: [] };
         }
 
-        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
-            assert.equal(params[6], 'CORRECTION');
-            assert.equal(params[10], true);
-            assert.equal(params[11], 'OPEN');
+        if (sql.startsWith('INSERT INTO intervention_logs ( asset_id, user_id, global_comment, failure_cause, duration_minutes, solution, document_path, classification, impact_level, probable_cause, preventive_action, follow_up_required, follow_up_status ) VALUES')) {
+            assert.equal(params[2], 'Se detecta fuga leve');
+            assert.equal(params[3], 'Se detecta fuga leve');
+            assert.equal(params[7], 'CORRECTION');
+            assert.equal(params[11], true);
+            assert.equal(params[12], 'OPEN');
             return { rows: [{ id: 52 }] };
         }
 
@@ -125,7 +129,7 @@ test('createLog envia correo si hay comentario o solucion aunque no haya campana
             body: {
                 asset_id: 8,
                 user_id: 2,
-                global_comment: 'Se detecta fuga leve',
+                failure_cause: 'Se detecta fuga leve',
                 duration_minutes: 12,
                 solution: '',
                 document_path: null,

@@ -1,21 +1,21 @@
 function applyHistoryScope(filters, params, access) {
+    if (access.isSuperAdmin) {
+        return true;
+    }
+
+    if (access.allowedDeptIds.length > 0) {
+        params.push(access.allowedDeptIds);
+        filters.push(`a.dept_id = ANY($${params.length}::int[])`);
+        return true;
+    }
+
     if (access.isAdmin && access.locationId) {
         params.push(access.locationId);
         filters.push(`d.location_id = $${params.length}`);
         return true;
     }
 
-    if (access.isSuperAdmin) {
-        return true;
-    }
-
-    if (access.allowedDeptIds.length === 0) {
-        return false;
-    }
-
-    params.push(access.allowedDeptIds);
-    filters.push(`a.dept_id = ANY($${params.length}::int[])`);
-    return true;
+    return false;
 }
 
 async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
@@ -68,10 +68,14 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
             h.plan_id,
             h.asset_id,
             h.operator_id,
+            h.scheduled_date,
             h.performed_date,
             h.created_at,
             h.notes,
             h.document_path,
+            h.reviewed_at,
+            h.reviewed_by,
+            h.reviewed_by_label,
             COALESCE(p.task_description, 'Mantenimiento realizado') AS task_description,
             a.name AS asset_name,
             d.id AS department_id,
@@ -79,8 +83,16 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
             l.id AS location_id,
             l.name AS location_name,
             u.full_name AS operator_name,
+            COALESCE(reviewer.full_name, h.reviewed_by_label) AS reviewed_by_name,
             NULL::TEXT AS solution,
             NULL::INTEGER AS duration_minutes,
+            NULL::TEXT AS classification,
+            NULL::TEXT AS impact_level,
+            NULL::TEXT AS probable_cause,
+            NULL::TEXT AS preventive_action,
+            NULL::BOOLEAN AS follow_up_required,
+            NULL::TEXT AS follow_up_status,
+            NULL::TEXT AS follow_up_notes,
             'preventive' AS entry_type
          FROM maintenance_history h
          JOIN assets a ON h.asset_id = a.id
@@ -88,6 +100,7 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
          LEFT JOIN departments d ON a.dept_id = d.id
          LEFT JOIN locations l ON d.location_id = l.id
          LEFT JOIN users u ON h.operator_id = u.id
+         LEFT JOIN users reviewer ON h.reviewed_by = reviewer.id
          ${maintenanceWhereClause}`,
         maintenanceParams
     );
@@ -139,8 +152,11 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
             l.user_id AS operator_id,
             l.created_at::date AS performed_date,
             l.created_at,
-            l.global_comment AS notes,
+            COALESCE(l.failure_cause, l.global_comment) AS notes,
             l.document_path,
+            l.reviewed_at,
+            l.reviewed_by,
+            l.reviewed_by_label,
             COALESCE(NULLIF(STRING_AGG(DISTINCT it.description, ' | '), ''), 'Averia / Correctivo') AS task_description,
             a.name AS asset_name,
             d.id AS department_id,
@@ -148,8 +164,16 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
             loc.id AS location_id,
             loc.name AS location_name,
             u.full_name AS operator_name,
+            COALESCE(reviewer.full_name, l.reviewed_by_label) AS reviewed_by_name,
             l.solution,
             l.duration_minutes,
+            l.classification,
+            l.impact_level,
+            l.probable_cause,
+            l.preventive_action,
+            l.follow_up_required,
+            l.follow_up_status,
+            l.follow_up_notes,
             'corrective' AS entry_type
          FROM intervention_logs l
          JOIN assets a ON l.asset_id = a.id
@@ -157,6 +181,7 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
          LEFT JOIN departments d ON a.dept_id = d.id
          LEFT JOIN locations loc ON d.location_id = loc.id
          LEFT JOIN users u ON l.user_id = u.id
+         LEFT JOIN users reviewer ON reviewer.id = l.reviewed_by
          ${interventionWhereClause}
          GROUP BY
             l.id,
@@ -164,15 +189,28 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
             l.user_id,
             l.created_at,
             l.global_comment,
+            l.failure_cause,
             l.document_path,
+            l.reviewed_at,
+            l.reviewed_by,
+            l.reviewed_by_label,
             l.solution,
             l.duration_minutes,
+            l.classification,
+            l.impact_level,
+            l.probable_cause,
+            l.preventive_action,
+            l.follow_up_required,
+            l.follow_up_status,
+            l.follow_up_notes,
             a.name,
             d.id,
             d.name,
             loc.id,
             loc.name,
-            u.full_name`,
+            u.full_name,
+            reviewer.full_name,
+            l.reviewed_by_label`,
         interventionParams
     );
 
@@ -183,6 +221,62 @@ async function fetchMaintenanceHistory(client, access, historyFilters = {}) {
     });
 }
 
+async function markHistoryEntryReviewed(client, access, entryType, entryId, reviewerId, reviewerLabel) {
+    const filters = [];
+    const params = [reviewerId, reviewerLabel];
+    const hasScope = applyHistoryScope(filters, params, access);
+    if (!access.isSuperAdmin && !hasScope) {
+        return null;
+    }
+
+    if (entryType === 'preventive') {
+        params.push(entryId);
+        filters.push(`h.id = $${params.length}`);
+
+        const result = await client.query(
+            `UPDATE maintenance_history h
+             SET reviewed_at = CURRENT_TIMESTAMP,
+                 reviewed_by = $1,
+                 reviewed_by_label = $2
+             FROM assets a
+             LEFT JOIN departments d ON a.dept_id = d.id
+             WHERE h.asset_id = a.id
+               AND ${filters.join(' AND ')}
+             RETURNING
+                h.id,
+                h.reviewed_at,
+                h.reviewed_by,
+                h.reviewed_by_label`,
+            params
+        );
+
+        return result.rows[0] || null;
+    }
+
+    params.push(entryId);
+    filters.push(`l.id = $${params.length}`);
+
+    const result = await client.query(
+        `UPDATE intervention_logs l
+         SET reviewed_at = CURRENT_TIMESTAMP,
+             reviewed_by = $1,
+             reviewed_by_label = $2
+         FROM assets a
+         LEFT JOIN departments d ON a.dept_id = d.id
+         WHERE l.asset_id = a.id
+           AND ${filters.join(' AND ')}
+         RETURNING
+            l.id,
+            l.reviewed_at,
+            l.reviewed_by,
+            l.reviewed_by_label`,
+        params
+    );
+
+    return result.rows[0] || null;
+}
+
 module.exports = {
     fetchMaintenanceHistory,
+    markHistoryEntryReviewed,
 };

@@ -7,6 +7,7 @@ exports.createLog = async (req, reply) => {
         asset_id,
         user_id,
         global_comment,
+        failure_cause,
         tasks,
         solution,
         consumed_parts,
@@ -22,6 +23,7 @@ exports.createLog = async (req, reply) => {
     try {
         await client.query('BEGIN');
 
+        const normalizedFailureCause = String(failure_cause || global_comment || '').trim();
         const normalizedSolution = typeof solution === 'string' ? solution.trim() : '';
         const requiresFollowUp = Boolean(follow_up_required || !normalizedSolution);
         const followUpStatus = requiresFollowUp ? 'OPEN' : 'NOT_REQUIRED';
@@ -31,6 +33,7 @@ exports.createLog = async (req, reply) => {
                 asset_id,
                 user_id,
                 global_comment,
+                failure_cause,
                 duration_minutes,
                 solution,
                 document_path,
@@ -40,12 +43,13 @@ exports.createLog = async (req, reply) => {
                 preventive_action,
                 follow_up_required,
                 follow_up_status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING id`,
             [
                 asset_id,
                 user_id,
-                global_comment,
+                normalizedFailureCause || null,
+                normalizedFailureCause || null,
                 req.body.duration_minutes || 0,
                 normalizedSolution || null,
                 document_path || null,
@@ -90,9 +94,9 @@ exports.createLog = async (req, reply) => {
         await client.query('COMMIT');
 
         const notifyEmail = process.env.NOTIFICATION_EMAIL || 'mantenimiento@bodegascare.com';
-        const hasGlobalComment = Boolean(global_comment && String(global_comment).trim());
+        const hasFailureCause = Boolean(normalizedFailureCause);
         const hasSolution = Boolean(normalizedSolution);
-        const shouldNotify = alertTasks.length > 0 || hasGlobalComment || hasSolution;
+        const shouldNotify = alertTasks.length > 0 || hasFailureCause || hasSolution;
 
         if (shouldNotify) {
             const userRes = await client.query('SELECT full_name FROM users WHERE id = $1', [user_id]);
@@ -140,7 +144,7 @@ exports.createLog = async (req, reply) => {
                         <p><strong>Duracion:</strong> ${req.body.duration_minutes || 0} min</p>
                         ${taskListHtml}
                         <hr>
-                        <p><strong>Problema / Comentario Global:</strong><br>${global_comment || 'Sin comentarios'}</p>
+                        <p><strong>Causa de la averia:</strong><br>${normalizedFailureCause || 'Sin causa indicada'}</p>
                         <p><strong>Solucion aplicada:</strong><br>${normalizedSolution || 'No registrada'}</p>
                         <hr>
                         ${isoHtml}

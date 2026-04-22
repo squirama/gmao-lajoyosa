@@ -204,8 +204,8 @@ export default function AdminCorrectiveActionsSection({
                                         <span>{STATUS_LABELS[item.follow_up_status] || item.follow_up_status}</span>
                                     </div>
 
-                                    <div className="admin-history-notes">
-                                        {item.global_comment || 'Sin descripcion del correctivo.'}
+                                    <div className="admin-history-solution">
+                                        <strong>Causa de la averia:</strong> {item.failure_cause || 'Sin causa registrada.'}
                                     </div>
 
                                     {item.solution && (
